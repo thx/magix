@@ -75,9 +75,6 @@ let View_DelegateEvents = (me, destroy) => {
         });
     }
 };
-/*#if(modules.viewMerge){#*/
-let View_Ctors = [];
-/*#}#*/
 let View_Globals = {
     win: G_WINDOW,
     doc: G_DOCUMENT
@@ -111,6 +108,34 @@ let View_MergeMixins = (mixins, proto, ctors) => {
     }
 };
 /*#}#*/
+function merge(...args) {
+    let me = this, _ = me._ || (me._ = []);
+    View_MergeMixins(args, me[G_PROTOTYPE], _);
+    return me;
+}
+
+function extend(props, statics) {
+    let me = this;
+    props = props || {};
+    let ctor = props.ctor;
+    /*#if(modules.viewProtoMixins){#*/
+    let ctors = [];
+    if (ctor) ctors.push(ctor);
+    /*#}#*/
+    function NView(d, a, b /*#if(modules.viewProtoMixins){#*/, c /*#}#*/, cs, z) {
+        me.call(z = this, d, a, b);
+        cs = NView._;
+        if (cs) G_ToTry(cs, a, z);
+        /*#if(modules.viewProtoMixins){#*/
+        G_ToTry(ctors.concat(c), b, z);
+        /*#}else{#*/
+        if (ctor) ctor.call(z, b);
+        /*#}#*/
+    }
+    NView.merge = merge;
+    NView.extend = extend;
+    return G_Extend(NView, me, props, statics);
+}
 /**
  * 预处理view
  * @param  {View} oView view子类
@@ -152,9 +177,12 @@ let View_Prepare = oView => {
                         mask = 2;
                         node = selectorObject[item];
                         if (!node) {
-                            node = selectorObject[item] = {};
+                            node = selectorObject[item] = [];
                         }
-                        node[selectorOrCallback] = 1;
+                        if (!node[selectorOrCallback]) {
+                            node[selectorOrCallback] = 1;
+                            node.push(selectorOrCallback);
+                        }
                     }
                     eventsObject[item] = eventsObject[item] | mask;
                     item = selectorOrCallback + G_SPLITER + item;
@@ -183,7 +211,6 @@ let View_Prepare = oView => {
         prop['@{view#events.object}'] = eventsObject;
         prop['@{view#events.list}'] = eventsList;
         prop['@{view#selector.events.object}'] = selectorObject;
-        prop['@{view#template.object}'] = prop.tmpl;
         prop['@{view#assign.fn}'] = prop.assign;
     }
     /*#if(modules.viewProtoMixins){#*/
@@ -267,10 +294,10 @@ function View(id, owner, ops, me) {
     me.updater = me['@{view#updater}'] = new Updater(me.id);
     /*#}#*/
     /*#if(modules.viewMerge){#*/
-    G_ToTry(View_Ctors, ops, me);
+    id = View._;
+    if (id) G_ToTry(id, ops, me);
     /*#}#*/
 }
-let ViewProto = View[G_PROTOTYPE];
 G_Assign(View, {
     /**
      * @lends View
@@ -305,9 +332,7 @@ G_Assign(View, {
      *
      */
     /*#if(modules.viewMerge){#*/
-    merge(...args) {
-        View_MergeMixins(args, ViewProto, View_Ctors);
-    },
+    merge,
     /*#}#*/
     /**
      * 继承
@@ -339,27 +364,9 @@ G_Assign(View, {
      *     }
      * });
      */
-    extend(props, statics) {
-        let me = this;
-        props = props || {};
-        let ctor = props.ctor;
-        /*#if(modules.viewProtoMixins){#*/
-        let ctors = [];
-        if (ctor) ctors.push(ctor);
-        /*#}#*/
-        function NView(d, a, b/*#if(modules.viewSlot){#*/, e/*#}#*/ /*#if(modules.viewProtoMixins){#*/, c /*#}#*/) {
-            me.call(this, d, a, b);
-            /*#if(modules.viewProtoMixins){#*/
-            G_ToTry(ctors.concat(c), /*#if(modules.viewSlot){#*/[b, e]/*#}else{#*/b/*#}#*/, this);
-            /*#}else{#*/
-            if (ctor) ctor.call(this, b/*#if(modules.viewSlot){#*/, e/*#}#*/);
-            /*#}#*/
-        }
-        NView.extend = me.extend;
-        return G_Extend(NView, me, props, statics);
-    }
+    extend
 });
-G_Assign(ViewProto /*#if(!modules.mini){#*/, MEvent/*#}#*/, {
+G_Assign(View[G_PROTOTYPE] /*#if(!modules.mini){#*/, MEvent/*#}#*/, {
     /**
      * @lends View#
      */

@@ -21,7 +21,7 @@ let MEvent = {
             list = me[key],
             end, len, idx, t;
         if (!data) data = {};
-        if (!data.type) data.type = name;
+        data.type = name;
         if (list) {
             end = list.length;
             len = end - 1;
@@ -41,6 +41,7 @@ let MEvent = {
         list = me[`on${name}`];
         if (list) G_ToTry(list, data, me);
         if (remove) me.off(name);
+        return me;
     },
     /**
      * 绑定事件
@@ -66,6 +67,7 @@ let MEvent = {
         list.push({
             f
         });
+        return me;
     },
     /**
      * 解除事件绑定
@@ -90,6 +92,7 @@ let MEvent = {
             delete me[key];
             delete me[`on${name}`];
         }
+        return me;
     }
 };
 Magix.Event = MEvent;

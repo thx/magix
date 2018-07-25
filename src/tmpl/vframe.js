@@ -37,7 +37,7 @@ let Vframe_NotifyAlter = (vframe, e) => {
 let Vframe_TranslateQuery = (pId, src, params, pVf) => {
     pVf = Vframe_Vframes[pId];
     pVf = pVf && pVf['@{vframe#view.entity}'];
-    pVf = pVf ? pVf['@{view#updater}']['@{updater#data}'] : {};
+    pVf = pVf ? pVf['@{view#updater}']['@{updater#ref.data}'] : {};
     if (src.indexOf(G_SPLITER) > 0) {
         G_TranslateData(pVf, params);
     }
@@ -206,13 +206,8 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
      */
     mountView(viewPath, viewInitParams /*,keepPreHTML*/) {
         let me = this;
-        let { id, pId, '@{vframe#sign}': s } = me;
+        let { id, pId } = me;
         let node = G_GetById(id),
-            /*#if(modules.viewSlot){#*/
-            vNodes = {
-                nodes: node['@{node#vnodes}']
-            },
-            /*#}#*/
             po, sign, view, params /*#if(modules.viewProtoMixins){#*/, ctors /*#}#*/ /*#if(modules.updater){#*/, parentVf/*#}#*/;
         if (!me['@{vframe#alter.node}'] && node) { //alter
             me['@{vframe#alter.node}'] = 1;
@@ -224,11 +219,7 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
         view = po[G_PATH];
         if (node && view) {
             me[G_PATH] = viewPath;
-            sign = ++s;
             params = po[G_PARAMS];
-            /*#if(modules.viewSlot){#*/
-            pId = node.getAttribute(G_MX_OWNER) || pId;
-            /*#}#*/
             /*#if(modules.updater){#*/
             /*#if(modules.mxViewAttr){#*/
             pId = node.getAttribute('mx-datafrom') || pId;
@@ -263,6 +254,7 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
             /*#}#*/
             /*#}#*/
             G_Assign(params, viewInitParams);
+            sign = me['@{vframe#sign}'];
             G_Require(view, TView => {
                 if (sign == me['@{vframe#sign}']) { //有可能在view载入后，vframe已经卸载了
                     if (!TView) {
@@ -273,7 +265,7 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
                     /*#}else{#*/
                     View_Prepare(TView);
                     /*#}#*/
-                    view = new TView(id, me, params/*#if(modules.viewSlot){#*/, vNodes /*#}#*//*#if(modules.viewProtoMixins){#*/, ctors /*#}#*/);
+                    view = new TView(id, me, params/*#if(modules.viewProtoMixins){#*/, ctors /*#}#*/);
 
                     if (DEBUG) {
                         let viewProto = TView.prototype;
@@ -306,15 +298,26 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
                     /*#}#*/
                     View_DelegateEvents(view);
                     /*#if(modules.viewInit){#*/
-                    G_ToTry(view.init, /*#if(modules.viewSlot){#*/[params, vNodes]/*#}else{#*/params/*#}#*/, view);
+                    /*#if(modules.viewInitAsync){#*/
+                    params =/*#}#*/ G_ToTry(view.init, params, view);
                     /*#}#*/
-                    view['@{view#render.short}']();
-                    if (!view['@{view#template.object}']) { //无模板
-                        me['@{vframe#alter.node}'] = 0; //不会修改节点，因此销毁时不还原
-                        if (!view['@{view#rendered}']) {
-                            view.endUpdate();
+                    /*#if(modules.viewInitAsync){#*/
+                    if (!params) params = { then: f => f() };
+                    sign = ++me['@{vframe#sign}'];
+                    params.then(() => {
+                        if (sign == me['@{vframe#sign}']) {
+                            /*#}#*/
+                            view['@{view#render.short}']();
+                            if (!view.tmpl) { //无模板
+                                me['@{vframe#alter.node}'] = 0; //不会修改节点，因此销毁时不还原
+                                if (!view['@{view#rendered}']) {
+                                    view.endUpdate();
+                                }
+                            }
+                            /*#if(modules.viewInitAsync){#*/
                         }
-                    }
+                    });
+                    /*#}#*/
                 }
             });
         }
@@ -433,10 +436,6 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
         zoneId = zoneId || me.id;
 
         let vframes = $(`${G_HashKey}${zoneId} [${G_MX_VIEW}]`);
-        /*#if(modules.updaterQuick){#*/
-        let vNodes = Updater_VframesToVNodes[zoneId],
-            vCount = 0;
-        /*#}#*/
         /*
             body(#mx-root)
                 div(mx-vframe=true,mx-view='xx')
@@ -466,16 +465,13 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
             svfs, subVf;
         /*#}#*/
         for (vf of vframes) {
-            if (!vf['@{node#mounted.vframe}'] /*#if(modules.viewSlot){#*/ && vf.getAttribute(G_MX_OWNER) != me.id/*#}#*/) { //防止嵌套的情况下深层的view被反复实例化
+            if (!vf['@{node#mounted.vframe}']) { //防止嵌套的情况下深层的view被反复实例化
                 id = IdIt(vf);
                 /*#if(modules.layerVframe){#*/
                 if (!G_Has(subs, id)) {
                     /*#}#*/
                     vf['@{node#mounted.vframe}'] = 1;
                     vfs.push([id, vf.getAttribute(G_MX_VIEW)]);
-                    /*#if(modules.updaterQuick){#*/
-                    vf['@{node#vnodes}'] = vNodes && vNodes[vCount];
-                    /*#}#*/
                     /*#if(modules.layerVframe){#*/
                 }
                 svfs = $(`${G_HashKey}${id} [${G_MX_VIEW}]`);
@@ -485,9 +481,6 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
                 }
                 /*#}#*/
             }
-            /*#if(modules.updaterQuick){#*/
-            vCount++;
-            /*#}#*/
         }
         for ([id, vf] of vfs) {
             if (DEBUG && document.querySelectorAll(`#${id}`).length > 1) {

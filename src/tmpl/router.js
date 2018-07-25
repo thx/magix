@@ -395,6 +395,15 @@ let Router = {
      * });
      *
      * //凡是带path的修改地址栏，都会把原来地址栏中的参数丢弃
+     * 传递对象，内部对value会进行encodeURIComponent操作，传递字符串需要开发者自己处理。
+     * R.to({
+     *  page:2,
+     *  rows:20
+     * },null,true);//使用location.replace操作hash
+     * R.to({
+     *  page:2,
+     *  rows:20
+     * },null,null,true);//静默更新url但不派发事件
      */
     to(pn, params, replace, silent) {
         if (!params && G_IsObject(pn)) {

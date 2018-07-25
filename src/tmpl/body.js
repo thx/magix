@@ -103,33 +103,35 @@ let Body_FindVframeInfo = (current, eventType) => {
                 info['@{node#owner.vframe}'] = selectorVfId;
             }
         }
-        if (selectorVfId != G_HashKey) { //从最近的vframe向上查找带有选择器事件的view
-            /*#if(modules.layerVframe){#*/
-            let findParent = match && !match.v;
-            /*#}#*/
-            begin = current.id;
-            if (Vframe_Vframes[begin]) {
-                /*
-                    如果当前节点是vframe的根节点，则把当前的vf置为该vframe
-                    该处主要处理这样的边界情况
-                    <mx-vrame src="./test" mx-click="parent()"/>
-                    //.test.js
-                    export default Magix.View.extend({
-                        '$<click>'(){
-                            console.log('test clicked');
-                        }
-                    });
+        //if (selectorVfId != G_HashKey) { //从最近的vframe向上查找带有选择器事件的view
+        /*#if(modules.layerVframe){#*/
+        let findParent = match && !match.v;
+        /*#}#*/
+        begin = current.id;
+        if (Vframe_Vframes[begin]) {
+            /*
+                如果当前节点是vframe的根节点，则把当前的vf置为该vframe
+                该处主要处理这样的边界情况
+                <mx-vrame src="./test" mx-click="parent()"/>
+                //.test.js
+                export default Magix.View.extend({
+                    '$<click>'(){
+                        console.log('test clicked');
+                    }
+                });
 
-                    当click事件发生在mx-vframe节点上时，要先派发内部通过选择器绑定在根节点上的事件，然后再派发外部的事件
-                */
-                backtrace = selectorVfId = begin;
-            }
-            do {
-                vf = Vframe_Vframes[selectorVfId];
-                if (vf && (view = vf['@{vframe#view.entity}'])) {
-                    selectorObject = view['@{view#selector.events.object}'];
-                    eventSelector = selectorObject[eventType];
-                    for (tempId in eventSelector) {
+                当click事件发生在mx-vframe节点上时，要先派发内部通过选择器绑定在根节点上的事件，然后再派发外部的事件
+            */
+            backtrace = selectorVfId = begin;
+        }
+        do {
+            vf = Vframe_Vframes[selectorVfId];
+            if (vf && (view = vf['@{vframe#view.entity}'])) {
+                selectorObject = view['@{view#selector.events.object}'];
+                eventSelector = selectorObject[eventType];
+                if (eventSelector) {
+                    for (begin = eventSelector.length; begin--;) {
+                        tempId = eventSelector[begin];
                         selectorObject = {
                             r: tempId,
                             v: selectorVfId,
@@ -147,27 +149,28 @@ let Body_FindVframeInfo = (current, eventType) => {
                             eventInfos.unshift(selectorObject);
                         }
                     }
-                    //防止跨view选中，到带模板的view时就中止或未指定
-                    /*#if(modules.layerVframe){#*/
-                    if (findParent) {
-                        if (match.v) {
-                            eventInfos.push({ ...match, v: selectorVfId });
-                        } else {
-                            match.v = selectorVfId;
-                        }
-                    }
-                    /*#}#*/
-                    if (view['@{view#template.object}'] && !backtrace) {
-                        /*#if(!modules.layerVframe){#*/
-                        if (match && !match.v) match.v = selectorVfId;
-                        /*#}#*/
-                        break; //带界面的中止
-                    }
-                    backtrace = 0;
                 }
+                //防止跨view选中，到带模板的view时就中止或未指定
+                /*#if(modules.layerVframe){#*/
+                if (findParent) {
+                    if (match.v) {
+                        eventInfos.push({ ...match, v: selectorVfId });
+                    } else {
+                        match.v = selectorVfId;
+                    }
+                }
+                /*#}#*/
+                if (view.tmpl && !backtrace) {
+                    /*#if(!modules.layerVframe){#*/
+                    if (match && !match.v) match.v = selectorVfId;
+                    /*#}#*/
+                    break; //带界面的中止
+                }
+                backtrace = 0;
             }
-            while (vf && (selectorVfId = vf.pId));
         }
+        while (vf && (selectorVfId = vf.pId));
+        //}
     }
     if (match) {
         eventInfos.push(match);
@@ -203,7 +206,7 @@ let Body_DOMEventProcessor = domEvent => {
                     fn = view[eventName];
                     if (fn) {
                         domEvent.eventTarget = target;
-                        params = i ? G_ParseExpr(i, view['@{view#updater}']['@{updater#data}']) : {};
+                        params = i ? G_ParseExpr(i, view['@{view#updater}']['@{updater#ref.data}']) : {};
                         domEvent[G_PARAMS] = params;
                         G_ToTry(fn, domEvent, view);
                         //没发现实际的用途
@@ -235,16 +238,20 @@ let Body_DOMEventProcessor = domEvent => {
             (ignore = ignore[target['@{node#guid}']]) &&
             ignore[type]) ||
             domEvent.isPropagationStopped()) { //避免使用停止事件冒泡，比如别处有一个下拉框，弹开，点击到阻止冒泡的元素上，弹出框不隐藏
+            //如果从某个节点开始忽略某个事件的处理，则如果缓存中有待处理的节点，把这些节点owner.vframe处理成当前节点的owner.vframe
             if (arr.length) {
                 arr.push(fn);
             }
             break;
         } else {
-            arr.push(target);
+            //如果某个节点是view临界节点
+            //先追加id，后续节点的owner.vframe则是该节点
             lastVfId = target.id;
             if (Vframe_Vframes[lastVfId]) {
                 arr.push(lastVfId);
             }
+            //缓存
+            arr.push(target);
         }
         target = target.parentNode || G_DOCBODY;
     }
@@ -259,7 +266,7 @@ let Body_DOMEventProcessor = domEvent => {
                 lastVfId = view['@{node#guid}'] || (view['@{node#guid}'] = ++Body_Guid);
                 if (!(params = eventInfos[lastVfId])) {
                     params = eventInfos[lastVfId] = {};
-                    view['@{node#owner.vframe}'] = ignore;
+                    //view['@{node#owner.vframe}'] = ignore;
                 }
                 params[type] = 1;
             } else {

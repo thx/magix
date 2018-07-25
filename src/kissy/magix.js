@@ -109,5 +109,5 @@ KISSY.add('magix', (S, SE, DOM) => {
     /*#}#*/
     return Magix;
 }, {
-        requires: ['event', 'node', 'dom']
+        requires: ['event', 'dom', 'node']
     });

@@ -1,5 +1,5 @@
 /*#if(modules.updaterQuick){#*/
-let Updater_VframesToVNodes = {};
+//let Updater_VframesToVNodes = {};
 /*#}#*/
 /*#if(!modules.updaterAsync){#*/
 let Updater_Digest = (updater, digesting) => {
@@ -11,6 +11,7 @@ let Updater_Digest = (updater, digesting) => {
         ref = { d: [], v: [] },
         node = G_GetById(selfId),
         tmpl, vdom, data = updater['@{updater#data}'],
+        refData = updater['@{updater#ref.data}'],
         /*#if(modules.updaterQuick){#*/
         //vfsToVNodes = [],
         /*#}#*/
@@ -34,19 +35,21 @@ let Updater_Digest = (updater, digesting) => {
     if (changed &&
         view &&
         view['@{view#sign}'] > 0 &&
-        (tmpl = view['@{view#template.object}'])) {
+        (tmpl = view.tmpl) && view['@{view#updater}'] == updater) {
+        //修正通过id访问到不同的对象
+        view.fire('dompatch');
         delete Body_RangeEvents[selfId];
         delete Body_RangeVframes[selfId];
         console.time('[updater time:' + selfId + ']');
         /*#if(modules.updaterVDOM){#*/
         /*#if(modules.updaterQuick){#*/
-        vdom = tmpl(data, Q_Create, selfId, Q_Safeguard, Q_Encode, Q_EncodeURI, Q_Ref, Q_EncodeQ/*, vfsToVNodes*/);
+        vdom = tmpl(data, refData, Q_Create, selfId, Q_Encode, Q_Safeguard, Q_EncodeURI, Q_Ref, Q_EncodeQ/*, vfsToVNodes*/);
         //Updater_VframesToVNodes[selfId] = vfsToVNodes.reverse();
         /*#}else{#*/
-        vdom = TO_VDOM(tmpl(data, selfId));
+        vdom = TO_VDOM(tmpl(data, selfId, refData));
         /*#}#*/
         /*#}else{#*/
-        vdom = I_GetNode(tmpl(data, selfId), node);
+        vdom = I_GetNode(tmpl(data, selfId, refData), node);
         /*#}#*/
         /*#if(modules.updaterVDOM){#*/
         V_SetChildNodes(node, updater['@{updater#vdom}'], vdom, ref, vf, keys);
@@ -100,13 +103,14 @@ let Updater_Digest_Async = (updater, resolve) => {
         /*#if(modules.updaterQuick){#*/
         //vfsToVNodes = [],
         /*#}#*/
-        tmpl, vdom, data = updater['@{updater#data}'];
-    updater['@{updater#data.changed}'] = 0;
-    updater['@{updater#keys}'] = {};
+        tmpl, vdom, data = updater['@{updater#data}'],
+        refData = updater['@{updater#ref.data}'];
     if (changed &&
         view &&
         view['@{view#sign}'] > 0 &&
-        (tmpl = view['@{view#template.object}'])) {
+        (tmpl = view.tmpl) && view['@{view#updater}'] == updater) {
+        updater['@{updater#data.changed}'] = 0;
+        updater['@{updater#keys}'] = {};
         delete Body_RangeEvents[selfId];
         delete Body_RangeVframes[selfId];
         Async_SetNewTask(vf, () => {
@@ -146,13 +150,13 @@ let Updater_Digest_Async = (updater, resolve) => {
             console.time('[updater time:' + selfId + ']');
             /*#if(modules.updaterVDOM){#*/
             /*#if(modules.updaterQuick){#*/
-            vdom = tmpl(data, Q_Create, selfId, Q_Safeguard, Q_Encode, Q_EncodeURI, Q_Ref, Q_EncodeQ/*, vfsToVNodes*/);
+            vdom = tmpl(data, refData, Q_Create, selfId, Q_Encode, Q_Safeguard, Q_EncodeURI, Q_Ref, Q_EncodeQ/*, vfsToVNodes*/);
             //Updater_VframesToVNodes[selfId] = vfsToVNodes.reverse();
             /*#}else{#*/
-            vdom = TO_VDOM(tmpl(data, selfId));
+            vdom = TO_VDOM(tmpl(data, selfId, refData));
             /*#}#*/
             /*#}else{#*/
-            vdom = I_GetNode(tmpl(data, selfId), node);
+            vdom = I_GetNode(tmpl(data, selfId, refData), node);
             /*#}#*/
             /*#if(modules.updaterVDOM){#*/
             V_SetChildNodes(node, updater['@{updater#vdom}'], vdom, ref, vf, keys);
@@ -182,7 +186,9 @@ function Updater(viewId) {
     me['@{updater#view.id}'] = viewId;
     me['@{updater#data.changed}'] = 1;
     me['@{updater#data}'] = {
-        vId: viewId,
+        vId: viewId
+    };
+    me['@{updater#ref.data}'] = {
         [G_SPLITER]: 1
     };
     me['@{updater#digesting.list}'] = [];
@@ -246,7 +252,7 @@ G_Assign(Updater[G_PROTOTYPE], {
      */
     set(obj) {
         let me = this;
-        me['@{updater#data.changed}'] = G_Set(obj, me['@{upater#data}'], me['@{updater#keys}']) || me['@{updater#data.changed}'];
+        me['@{updater#data.changed}'] = G_Set(obj, me['@{updater#data}'], me['@{updater#keys}']) || me['@{updater#data.changed}'];
         return me;
     },
     /**
@@ -348,13 +354,13 @@ G_Assign(Updater[G_PROTOTYPE], {
      * @param {string} origin 源字符串
      */
     translate(data) {
-        return G_TranslateData(this['@{updater#data}'], data, 1);
+        return G_TranslateData(this['@{updater#data}'], data);
     },
     /**
      * 翻译带@占位符的数据
      * @param {string} origin 源字符串
      */
     parse(origin) {
-        return G_ParseExpr(origin, this['@{updater#data}']);
+        return G_ParseExpr(origin, this['@{updater#ref.data}']);
     }
 });

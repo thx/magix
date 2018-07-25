@@ -250,14 +250,14 @@ declare namespace Magix {
          * @param name 事件名称
          * @param fn 事件处理函数
          */
-        on(name: string, fn: (this: T, e?: TriggerEventDescriptor) => void): void
+        on(name: string, fn: (this: T, e?: TriggerEventDescriptor) => void): this
 
         /**
          * 解除事件绑定
          * @param name 事件名称
          * @param fn 事件处理函数
          */
-        off(name: string, fn?: Function): void
+        off(name: string, fn?: Function): this
 
         /**
          * 派发事件
@@ -266,7 +266,7 @@ declare namespace Magix {
          * @param remove 是否移除所有的事件监听
          * @param lastToFirst 是否倒序派发列表中的监听
          */
-        fire(name: string, data?: object, remove?: boolean, lastToFirst?: boolean): void
+        fire(name: string, data?: object, remove?: boolean, lastToFirst?: boolean): this
     }
     /**
      * 状态接口
@@ -777,16 +777,6 @@ declare namespace Magix {
         leaveTip(msg: string, hasChanged: () => boolean): void
 
         /**
-         * 当view调用setHTML刷新某个节点前触发
-         */
-        onprerender: (this: this, e?: ViewEvent) => void;
-
-        /**
-         * 当view调用setHTML刷新某个节点后触发
-         */
-        onrendered: (this: this, e?: ViewEvent) => void;
-
-        /**
          * view销毁时触发
          */
         ondestroy: (this: this, e?: TriggerEventDescriptor) => void;
@@ -912,16 +902,6 @@ declare namespace Magix {
          * 接口发送结束时触发，不管请求成功或失败
          */
         onend: (this: this, e?: ServiceEvent) => void;
-
-        /**
-         * 接口发送请求失败时触发
-         */
-        onfail: (this: this, e?: ServiceEvent) => void;
-
-        /**
-         * 接口发送请求成功时触发
-         */
-        ondone: (this: this, e?: ServiceEvent) => void;
         /**
          * 初始化
          */

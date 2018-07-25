@@ -90,7 +90,7 @@ let V_CreateNode = (vnode, owner, ref, c, tag) => {
     }
     return c;
 };
-let V_GenKeyedNodes = (vnodes, nodes, start, end) => {
+/*let V_GenKeyedNodes = (vnodes, nodes, start, end) => {
     let keyed = {}, i = end, v, key;
     for (; i >= start; i--) {
         v = vnodes[i];
@@ -104,7 +104,7 @@ let V_GenKeyedNodes = (vnodes, nodes, start, end) => {
         }
     }
     return keyed;
-};
+};*/
 let V_SetChildNodes = (realNode, lastVDOM, newVDOM, ref, vframe, keys) => {
     if (lastVDOM) {//view首次初始化，通过innerHTML快速更新
         if (lastVDOM['@{~v#node.has.mxv}'] ||
@@ -321,30 +321,31 @@ let V_SetNode = (realNode, oldParent, lastVDOM, newVDOM, ref, vframe, keys, hasM
                     paramsChanged = newMxView != oldVf[G_PATH];
                     assign = lastAMap[G_Tag_View_Key];
                     if (!htmlChanged && !paramsChanged && assign) {
+                        hasMXV = 0;
                         params = assign.split(G_COMMA);
                         for (assign of params) {
-                            if (G_Has(keys, assign)) {
+                            if (assign == G_HashKey ||G_Has(keys, assign)) {
                                 paramsChanged = 1;
                                 break;
                             }
                         }
                     }
                     if (paramsChanged || htmlChanged || hasMXV) {
-                        assign = view['@{view#assign.fn}'];
+                        assign = view['@{view#rendered}'] && view['@{view#assign.fn}'];
                         //如果有assign方法,且有参数或html变化
                         if (assign) {
                             params = uri[G_PARAMS];
                             //处理引用赋值
-                            Vframe_TranslateQuery(/*#if(modules.viewSlot){#*/newAMap[G_MX_OWNER] ||/*#}#*/ oldVf.pId, newMxView, params);
+                            Vframe_TranslateQuery(oldVf.pId, newMxView, params);
                             //oldVf['@{vframe#template}'] = newHTML;
                             //oldVf['@{vframe#data.stringify}'] = newDataStringify;
                             oldVf[G_PATH] = newMxView;//update ref
                             //如果需要更新，则进行更新的操作
                             uri = {
-                                //nodes: newVDOM['@{~v#node.children}'],
+                                //node: newVDOM,//['@{~v#node.children}'],
                                 //html: newHTML,
                                 mxv: hasMXV,
-                                deep: !view['@{view#template.object}'],
+                                deep: !view.tmpl,
                                 inner: htmlChanged,
                                 query: paramsChanged,
                                 keys

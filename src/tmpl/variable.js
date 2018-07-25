@@ -17,9 +17,6 @@ let G_VALUE = 'value';
 let G_Tag_Key = 'mxs';
 let G_Tag_Attr_Key = 'mxa';
 let G_Tag_View_Key = 'mxv';
-/*#if(modules.viewSlot){#*/
-let G_MX_OWNER = 'mxo';
-/*#}#*/
 let G_HashKey = '#';
 function G_NOOP() { }
 /*#if(modules.service||modules.updater){#*/
@@ -167,24 +164,18 @@ let G_ToTry = (fns, args, context, r, e) => {
 
 let G_Has = (owner, prop) => owner && Magix_HasProp.call(owner, prop); //false 0 G_NULL '' undefined
 /*#if(modules.updater){#*/
-let G_TranslateData = (data, params, deep) => {
+let G_TranslateData = (data, params) => {
     let p, val;
-    if (!deep && G_IsPrimitive(params)) {
+    if (G_IsPrimitive(params)) {
         p = params + G_EMPTY;
-        if (p[0] == G_SPLITER) {
+        if (p[0] == G_SPLITER && G_Has(data, p)) {
             params = data[p];
         }
     } else {
         for (p in params) {
             val = params[p];
-            if (deep && !G_IsPrimitive(val)) {
-                G_TranslateData(data, val, deep);
-            }
-            if (p[0] == G_SPLITER) {
-                delete params[p];
-                p = data[p];
-            }
-            params[p] = (val + G_EMPTY)[0] == G_SPLITER ? data[val] : val;
+            val = G_TranslateData(data, val);
+            params[p] = val;
         }
     }
     return params;

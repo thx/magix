@@ -147,7 +147,7 @@ let G_ParseExpr = (expr, data, result) => {
         //jshint evil:true
         result = G_ToTry(Function(`return ${expr}`));
         if (expr.indexOf(G_SPLITER) > -1) {
-            G_TranslateData(data, result, 1);
+            G_TranslateData(data, result);
         } else {
             G_ParseCache.set(expr, result);
         }

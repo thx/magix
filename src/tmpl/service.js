@@ -141,21 +141,16 @@ let Service_Task = (done, host, service, total, flag, bagCache) => {
     let currentDoneCount = 0;
 
     return function (idx, error) {
+        currentDoneCount++; //当前完成加1.
         let bag = this;
         let newBag;
-        currentDoneCount++; //当前完成加1
         let mm = bag['@{service#meta.info}'];
-        let cacheKey = mm.k;
+        let cacheKey = mm.k, temp;
         doneArr[idx + 1] = bag; //完成的bag
-        let dispach = {
-            bag,
-            error
-        }, temp;
         if (error) { //出错
             errorArgs = error;
             //errorArgs[idx] = err; //记录相应下标的错误信息
             //G_Assign(errorArgs, err);
-            host.fire('fail', dispach);
             newBag = 1; //标记当前是一个新完成的bag,尽管出错了
         } else if (!bagCache.has(cacheKey)) { //如果缓存对象中不存在，则处理。注意在开始请求时，缓存与非缓存的都会调用当前函数，所以需要在该函数内部做判断处理
             if (cacheKey) { //需要缓存
@@ -171,7 +166,6 @@ let Service_Task = (done, host, service, total, flag, bagCache) => {
             if (temp) { //需要清理
                 host.clear(temp);
             }
-            host.fire('done', dispach);
             newBag = 1;
         }
         if (!service['@{service#destroyed}']) { //service['@{service#destroyed}'] 当前请求被销毁
@@ -188,7 +182,10 @@ let Service_Task = (done, host, service, total, flag, bagCache) => {
             }
         }
         if (newBag) { //不管当前request或回调是否销毁，均派发end事件，就像前面缓存一样，尽量让请求处理完成，该缓存的缓存，该派发事件派发事件。
-            host.fire('end', dispach);
+            host.fire('end', {
+                bag,
+                error
+            });
         }
     };
 };
