@@ -5,7 +5,7 @@ let Magix_ParamsObjectTemp;
 let Magix_ParamsFn = (match, name, value) => {
     try {
         value = decodeURIComponent(value);
-    } catch(_magix) {
+    } catch (_magix) {
 
     }
     Magix_ParamsObjectTemp[name] = value;
@@ -495,5 +495,10 @@ let Magix = {
     guid: G_Id,
     use: G_Require,
     Cache: G_Cache,
-    nodeId: IdIt
+    /*#if(modules.naked&&!modules.mini){#*/
+    fire: G_Trigger,
+    type: G_Type,
+    /*#}#*/
+    nodeId: IdIt,
+    guard: Safeguard
 };

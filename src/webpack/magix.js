@@ -1,18 +1,25 @@
 module.exports = (() => {
     if (typeof DEBUG == 'undefined') window.DEBUG = true;
+    /*#if(modules.naked){#*/
+    let G_Type = o => Object.prototype.toString.call(o).slice(8, -1);
+    let G_IsType = type => o => G_Type(o) == type;
+    let G_IsObject = G_IsType('Object');
+    let G_IsArray = G_IsType('Array');
+    /*#}else{#*/
     let $ = require('$');
     let G_IsObject = $.isPlainObject;
     let G_IsArray = $.isArray;
+    /*#}#*/
     Inc('../tmpl/variable');
     Inc('../tmpl/cache');
     let G_IsFunction = $.isFunction;
+    let mxViews = Magix_Cfg.views = {};
     /*#if(modules.defaultView){#*/
     let coreDefaultView;
     /*#}#*/
     let G_Require = (name, fn) => {
-        let views = Magix_Cfg.views || G_NOOP;
         /*#if(modules.defaultView){#*/
-        if (!views[MxGlobalView]) views[MxGlobalView] = coreDefaultView;
+        if (!mxViews[MxGlobalView]) mxViews[MxGlobalView] = coreDefaultView;
         /*#}#*/
         if (!name) {
             return fn();
@@ -42,17 +49,21 @@ module.exports = (() => {
             }
         };
         for (let i = 0; i < name.length; i++) {
-            view = views[name[i]];
+            view = mxViews[name[i]];
             if (G_IsFunction(view) && !view.extend) {
                 promiseCount++;
                 promise(view, i);
             } else {
-                results[i] = views[name[i]];
+                results[i] = mxViews[name[i]];
             }
         }
         checkCount();
     };
     Inc('../tmpl/extend');
+
+    /*#if(modules.naked){#*/
+    Inc('../tmpl/naked');
+    /*#}else{#*/
     let G_SelectorEngine = $.find || $.zepto;
     let G_TargetMatchSelector = G_SelectorEngine.matchesSelector || G_SelectorEngine.matches;
     let G_DOMGlobalProcessor = (e, d) => {
@@ -60,25 +71,6 @@ module.exports = (() => {
         e.eventTarget = d.e;
         G_ToTry(d.f, e, d.v);
     };
-    /*#if(modules.eventEnterLeave){#*/
-    let Specials = {
-        mouseenter: 1,
-        mouseleave: 1,
-        pointerenter: 1,
-        pointerleave: 1
-    };
-    let G_DOMEventLibBind = (node, type, cb, remove, scope, selector) => {
-        if (scope) {
-            type += `.${scope.i}`;
-        }
-        selector = Specials[type] === 1 ? `[mx-${type}]` : G_EMPTY;
-        if (remove) {
-            $(node).off(type, selector, cb);
-        } else {
-            $(node).on(type, selector, scope, cb);
-        }
-    };
-    /*#}else{#*/
     let G_DOMEventLibBind = (node, type, cb, remove, scope) => {
         if (scope) {
             type += `.${scope.i}`;
@@ -101,9 +93,6 @@ module.exports = (() => {
     /*#if(modules.router){#*/
     Inc('../tmpl/router');
     /*#}#*/
-    /*#if(modules.mxViewAttr){#*/
-    let G_Trim = $.trim;
-    /*#}#*/
     /*#if(modules.router||modules.state){#*/
     Inc('../tmpl/dispatcher');
     /*#}#*/
@@ -123,6 +112,9 @@ module.exports = (() => {
     /*#}#*/
 
     Inc('../tmpl/body');
+    /*#if(modules.viewChildren){#*/
+    Inc('../tmpl/children');
+    /*#}#*/
     /*#if(modules.updater){#*/
     /*#if(!modules.updaterVDOM&&!modules.updaterDOM){#*/
     Inc('../tmpl/tmpl');
@@ -139,19 +131,18 @@ module.exports = (() => {
     /*#}#*/
     Inc('../tmpl/updater');
     /*#}#*/
-    /*#if(modules.viewSlot){#*/
-    Inc('../tmpl/slot');
-    /*#}#*/
     Inc('../tmpl/view');
     /*#if(modules.service){#*/
+    /*#if(!modules.naked){#*/
     let G_Type = $.type;
-    let G_Now = $.now || Date.now;
+    /*#}#*/
+    let G_Now = Date.now;
     Inc('../tmpl/service');
+    /*#if(modules.servicePush){#*/
+    Inc('../tmpl/svsx');
+    /*#}#*/
     /*#}#*/
     Inc('../tmpl/base');
-    /*#if(modules.naked&&!modules.mini){#*/
-    Magix.fire = G_Trigger;
-    /*#}#*/
     /*#if(modules.defaultView){#*/
     coreDefaultView = View.extend();
     /*#}#*/
@@ -162,8 +153,7 @@ module.exports = (() => {
      * @param {Promise} [promise] 对应的promise对象
      */
     Magix.addView = (name, promiseObj) => {
-        let cfgViews = Magix_Cfg.views = Magix_Cfg.views || {};
-        cfgViews[name] = promiseObj;
+        mxViews[name] = promiseObj;
     };
     return Magix;
 })();

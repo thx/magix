@@ -1,4 +1,4 @@
-KISSY.add('magix', (S, SE, DOM) => {
+KISSY.add('magix', (S, SE, DOM, SNode) => {
     if (typeof DEBUG == 'undefined') window.DEBUG = true;
     let $ = S.all;
     let G_IsObject = S.isObject;
@@ -19,22 +19,6 @@ KISSY.add('magix', (S, SE, DOM) => {
         e.eventTarget = d.e;
         G_ToTry(d.f, e, d.v);
     }
-    /*#if(modules.eventEnterLeave){#*/
-    let Specials = {
-        mouseenter: 1,
-        mouseleave: 1,
-        pointerenter: 1,
-        pointerleave: 1
-    };
-    let G_DOMEventLibBind = (node, type, cb, remove, scope, selector) => {
-        selector = Specials[type] === 1 ? `[mx-${type}]` : G_EMPTY;
-        if (scope || selector) {
-            SE[`${remove ? 'un' : G_EMPTY}delegate`](node, type, selector, cb, scope);
-        } else {
-            SE[remove ? 'detach' : 'on'](node, type, cb, scope);
-        }
-    };
-    /*#}else{#*/
     let G_DOMEventLibBind = (node, type, cb, remove, scope) => {
         if (scope) {
             SE[`${remove ? 'un' : G_EMPTY}delegate`](node, type, cb, scope);
@@ -42,7 +26,6 @@ KISSY.add('magix', (S, SE, DOM) => {
             SE[remove ? 'detach' : 'on'](node, type, cb, scope);
         }
     };
-    /*#}#*/
 
     Inc('../tmpl/safeguard');
     Inc('../tmpl/magix');
@@ -54,9 +37,6 @@ KISSY.add('magix', (S, SE, DOM) => {
     //let G_IsFunction = S.isFunction;
     Inc('../tmpl/router');
     /*#}#*/
-    /*#if(modules.mxViewAttr){#*/
-    let G_Trim = S.trim;
-    /*#}#*/
     /*#if(modules.router||modules.state){#*/
     Inc('../tmpl/dispatcher');
     /*#}#*/
@@ -65,7 +45,7 @@ KISSY.add('magix', (S, SE, DOM) => {
     /*#}#*/
     Inc('../tmpl/vframe');
     /*#if(modules.nodeAttachVframe){#*/
-    DOM[G_PROTOTYPE].invokeView = function (name, args) {
+    SNode[G_PROTOTYPE].invokeView = function (name, args) {
         let returned = [], e, vf;
         for (e of this) {
             vf = e.vframe;
@@ -77,6 +57,9 @@ KISSY.add('magix', (S, SE, DOM) => {
 
     Inc('../tmpl/body');
 
+    /*#if(modules.viewChildren){#*/
+    Inc('../tmpl/children');
+    /*#}#*/
     /*#if(modules.updater){#*/
     /*#if(!modules.updaterVDOM&&!modules.updaterDOM){#*/
     Inc('../tmpl/tmpl');
@@ -93,15 +76,15 @@ KISSY.add('magix', (S, SE, DOM) => {
     /*#}#*/
     Inc('../tmpl/updater');
     /*#}#*/
-    /*#if(modules.viewSlot){#*/
-    Inc('../tmpl/slot');
-    /*#}#*/
     Inc('../tmpl/view');
 
     /*#if(modules.service){#*/
     let G_Type = S.type;
     let G_Now = S.now;
     Inc('../tmpl/service');
+    /*#if(modules.servicePush){#*/
+    Inc('../tmpl/svsx');
+    /*#}#*/
     /*#}#*/
     Inc('../tmpl/base');
     /*#if(modules.defaultView){#*/

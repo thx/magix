@@ -17,6 +17,9 @@ let G_VALUE = 'value';
 let G_Tag_Key = 'mxs';
 let G_Tag_Attr_Key = 'mxa';
 let G_Tag_View_Key = 'mxv';
+/*#if(modules.vframeHost){#*/
+let G_Tag_View_Owner = 'mxo';
+/*#}#*/
 let G_HashKey = '#';
 function G_NOOP() { }
 /*#if(modules.service||modules.updater){#*/
@@ -49,22 +52,20 @@ let Magix_Cfg = {
     defaultView: MxGlobalView,
     /*#}#*/
     error(e) {
-        Timeout(() => {
-            throw e;
-        });
+        throw e;
     }
 };
 
 let G_GetById = id => typeof id == Magix_StrObject ? id : G_DOCUMENT.getElementById(id);
 /*#if(modules.updater||modules.state){#*/
 let G_IsPrimitive = args => !args || typeof args != Magix_StrObject;
-let G_Set = (newData, oldData, keys) => {
+let G_Set = (newData, oldData, keys, unchanged) => {
     let changed = 0,
         now, old, p;
     for (p in newData) {
         now = newData[p];
         old = oldData[p];
-        if (!G_IsPrimitive(now) || old !== now) {
+        if ((!G_IsPrimitive(now) || old !== now) && !G_Has(unchanged, p)) {
             keys[p] = 1;
             changed = 1;
         }
@@ -131,6 +132,9 @@ let View_ApplyStyle = (key, css) => {
     if (css && !View_ApplyStyle[key]) {
         View_ApplyStyle[key] = 1;
         if (DEBUG) {
+            if (key.indexOf('$throw_') === 0) {
+                throw new Error(css);
+            }
             /*#if(modules.naked){#*/
             Temp.innerHTML = `<style id="${key}">${css}`;
             Header.appendChild(Temp.firstChild);

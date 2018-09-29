@@ -159,8 +159,9 @@ declare namespace Magix {
         /**
          * 设置数据
          * @param data 数据对象，如{a:20,b:30}
+         * @param unchanged 指示哪些数据并没有变化的对象
          */
-        set(data?: { [key: string]: any }): this
+        set(data?: { [key: string]: any }, unchanged?: { [key: string]: any }, ): this
 
         /**
          * 通过path获取值，path形如"data.list.2.name"字符串
@@ -171,9 +172,10 @@ declare namespace Magix {
         /**
          * 检测数据变化，更新界面，放入数据后需要显式调用该方法才可以把数据更新到界面
          * @param data 数据对象，如{a:20,b:30}
+         * @param unchanged 指示哪些数据并没有变化的对象
          * @param resolve 完成更新后的回调
          */
-        digest(data?: { [key: string]: any }, resolve?: Function): void
+        digest(data?: { [key: string]: any }, unchanged?: { [key: string]: any }, resolve?: Function): void
 
         /**
          * 获取当前数据状态的快照，配合altered方法可获得数据是否有变化
@@ -280,8 +282,9 @@ declare namespace Magix {
         /**
          * 设置数据
          * @param data 数据对象
+         * @param unchanged 指示哪些数据并没有变化的对象
          */
-        set(data: object): this
+        set(data: object, unchanged?: { [key: string]: any }): this
         /**
          * 清理Magix.State中的数据，只能在view的mixins中使用，如 mixins:[Magix.State.clean("a,b")]
          * @param keys 逗号分割的字符串
@@ -290,8 +293,9 @@ declare namespace Magix {
         /**
          * 检测数据变化，派发changed事件，通过set放入数据后需要显式调用该方法才会派发事件
          * @param data 数据对象，如{a:20,b:30}
+         * @param unchanged 指示哪些数据并没有变化的对象
          */
-        digest(data?: object): void
+        digest(data?: object, unchanged?: { [key: string]: any }): void
         /**
          * State中的数据发生变化时触发
          */
@@ -305,6 +309,10 @@ declare namespace Magix {
          * 缓存时间，以毫秒为单位
          */
         cache?: number
+        /**
+         * 请求的url地址
+         */
+        url?: string
         /**
          * 添加的接口元信息名称，需要确保在一个Service中唯一
          */
@@ -322,6 +330,8 @@ declare namespace Magix {
          * 接口在成功请求后，在送到view毅调用该方法，可在该方法对数据进行加工处理
          */
         after?: (this: Bag, bag: Bag) => void
+
+        [key: string]: any
     }
 
     /**
@@ -542,7 +552,7 @@ declare namespace Magix {
          * @param props 原型方法或属性的对象
          * @param statics 静态方法或属性的对象
          */
-        extend<TProps=null, TStatics =object>(props?: TExtendPropertyDescriptor<TProps & BasePrototype>, statics?: TStatics): this & TStatics
+        extend<TProps=object, TStatics =object>(props?: TExtendPropertyDescriptor<TProps & BasePrototype>, statics?: TStatics): this & TStatics
         /**
          * 原型
          */
@@ -795,7 +805,7 @@ declare namespace Magix {
          * @param props 包含可选的init和render方法的对象
          * @param statics 静态方法或属性的对象
          */
-        extend<TProps=null, TStatics =object>(props?: TExtendPropertyDescriptor<TProps & ViewPrototype>, statics?: TStatics): this & TStatics
+        extend<TProps=object, TStatics =object>(props?: TExtendPropertyDescriptor<TProps & ViewPrototype>, statics?: TStatics): this & TStatics
         /**
          * 扩展到Magix.View原型上的对象
          * @param props 包含可选的ctor方法的对象
@@ -1005,12 +1015,35 @@ declare interface Magix {
     node(id: string | HTMLElement): HTMLElement | null
 
     /**
+     * 给节点添加id
+     * @param node 节点对象
+     */
+    nodeId(node: HTMLElement): string
+
+    /**
+     * 使用加载器的加载模块功能
+     * @param deps 模块id
+     * @param callback 回调
+     */
+    use(deps: string[], callback: (...args: object[]) => any): void
+
+    /**
+     * 保护对象不被修改
+     * @param o 保护对象
+     */
+    guard<T extends object>(o: T): T
+
+    /**
      * 向页面追加样式
      * @param key 样式对应的唯一key，该key主要防止向页面反复添加同样的样式
      * @param cssText 样式字符串
      */
-    applyStyle(key: string, cssText?: string): void
-
+    applyStyle(key: string, cssText: string): void
+    /**
+     * 向页面追加样式
+     * @param atFile 以@开头的文件路径
+     */
+    applyStyle(atFile: string): void
     /**
      * 生成唯一的guid
      * @param prefix guid的前缀，默认mx-

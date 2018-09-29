@@ -1,15 +1,15 @@
 //#snippet;
 //#uncheck = jsThis,jsLoop;
 //#exclude = loader,allProcessor;
-/*!3.8.11 Licensed MIT*/
+/*!3.8.12 Licensed MIT*/
 /*
 author:kooboy_li@163.com
 loader:kissy
 enables:style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,viewInitAsync
 
-optionals:updaterVDOM,updaterAsync,serviceCombine,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,collectView,layerVframe,share,mxViewAttr,keepHTML,eventEnterLeave,naked,vdom
+optionals:updaterVDOM,updaterQuick,updaterAsync,updaterTouchAttr,serviceCombine,servicePush,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,vframeHost,layerVframe,collectView,share,keepHTML,naked,viewChildren,dispatcherRecast
 */
-KISSY.add('magix', function (S, SE, DOM) {
+KISSY.add('magix', function (S, SE, DOM, SNode) {
     if (typeof DEBUG == 'undefined')
         window.DEBUG = true;
     var $ = S.all;
@@ -58,19 +58,17 @@ KISSY.add('magix', function (S, SE, DOM) {
         rootId: G_Id(),
         defaultView: MxGlobalView,
         error: function (e) {
-            Timeout(function () {
-                throw e;
-            });
+            throw e;
         }
     };
     var G_GetById = function (id) { return typeof id == Magix_StrObject ? id : G_DOCUMENT.getElementById(id); };
     var G_IsPrimitive = function (args) { return !args || typeof args != Magix_StrObject; };
-    var G_Set = function (newData, oldData, keys) {
+    var G_Set = function (newData, oldData, keys, unchanged) {
         var changed = 0, now, old, p;
         for (p in newData) {
             now = newData[p];
             old = oldData[p];
-            if (!G_IsPrimitive(now) || old !== now) {
+            if ((!G_IsPrimitive(now) || old !== now) && !G_Has(unchanged, p)) {
                 keys[p] = 1;
                 changed = 1;
             }
@@ -122,6 +120,9 @@ KISSY.add('magix', function (S, SE, DOM) {
         if (css && !View_ApplyStyle[key]) {
             View_ApplyStyle[key] = 1;
             if (DEBUG) {
+                if (key.indexOf('$throw_') === 0) {
+                    throw new Error(css);
+                }
                 Header.append("<style id=\"" + key + "\">" + css);
             }
             else {
@@ -309,55 +310,56 @@ KISSY.add('magix', function (S, SE, DOM) {
             SE[remove ? 'detach' : 'on'](node, type, cb, scope);
         }
     };
-    if (DEBUG) {
-        var Safeguard;
-        if (window.Proxy) {
-            var ProxiesPool_1 = new Map();
-            Safeguard = function (data, getter, setter) {
-                if (G_IsPrimitive(data)) {
-                    return data;
+    var Safeguard = function (data) { return data; };
+    if (DEBUG && window.Proxy) {
+        var ProxiesPool_1 = new Map();
+        Safeguard = function (data, getter, setter) {
+            if (G_IsPrimitive(data)) {
+                return data;
+            }
+            var build = function (prefix, o) {
+                var key = getter + '\x01' + setter;
+                var cached = ProxiesPool_1.get(o);
+                if (cached && cached.key == key) {
+                    return cached.entity;
                 }
-                var build = function (prefix, o) {
-                    var key = getter + '\x01' + setter;
-                    var cached = ProxiesPool_1.get(o);
-                    if (cached && cached.key == key) {
-                        return cached.entity;
-                    }
-                    var entity = new Proxy(o, {
-                        set: function (target, property, value) {
-                            if (!setter && !prefix) {
-                                throw new Error('avoid writeback,key: ' + prefix + property + ' value:' + value + ' more info: https://github.com/thx/magix/issues/38');
-                            }
-                            target[property] = value;
-                            if (setter) {
-                                setter(prefix + property, value);
-                            }
-                            return true;
-                        },
-                        get: function (target, property) {
-                            var out = target[property];
-                            if (!prefix && getter) {
-                                getter(property);
-                            }
-                            if (G_Has(target, property) &&
-                                (G_IsArray(out) || G_IsObject(out))) {
-                                return build(prefix + property + '.', out);
-                            }
-                            return out;
+                if (o['\x1e_sf_\x1e']) {
+                    return o;
+                }
+                var entity = new Proxy(o, {
+                    set: function (target, property, value) {
+                        if (!setter && !prefix) {
+                            throw new Error('avoid writeback,key: ' + prefix + property + ' value:' + value + ' more info: https://github.com/thx/magix/issues/38');
                         }
-                    });
-                    ProxiesPool_1.set(o, {
-                        key: key,
-                        entity: entity
-                    });
-                    return entity;
-                };
-                return build('', data);
+                        target[property] = value;
+                        if (setter) {
+                            setter(prefix + property, value);
+                        }
+                        return true;
+                    },
+                    get: function (target, property) {
+                        if (property == '\x1e_sf_\x1e') {
+                            return true;
+                        }
+                        var out = target[property];
+                        if (!prefix && getter) {
+                            getter(property);
+                        }
+                        if (G_Has(target, property) &&
+                            (G_IsArray(out) || G_IsObject(out))) {
+                            return build(prefix + property + '.', out);
+                        }
+                        return out;
+                    }
+                });
+                ProxiesPool_1.set(o, {
+                    key: key,
+                    entity: entity
+                });
+                return entity;
             };
-        }
-        else {
-            Safeguard = function (data) { return data; };
-        }
+            return build('', data);
+        };
     }
     var Magix_PathToObjCache = new G_Cache();
     var Magix_Booted = 0;
@@ -827,7 +829,8 @@ KISSY.add('magix', function (S, SE, DOM) {
         guid: G_Id,
         use: G_Require,
         Cache: G_Cache,
-        nodeId: IdIt
+        nodeId: IdIt,
+        guard: Safeguard
     };
     /**
      * 多播事件对象
@@ -991,6 +994,43 @@ KISSY.add('magix', function (S, SE, DOM) {
             });
         }, 0);
     }
+    if (DEBUG) {
+        var Started_1 = 0;
+        var NotifyList_1 = [];
+        var NotifyTimer_1 = 0;
+        var Notify_1 = function () {
+            var locker = {};
+            for (var _i = 0, NotifyList_2 = NotifyList_1; _i < NotifyList_2.length; _i++) {
+                var n = NotifyList_2[_i];
+                if (!locker[n.msg]) {
+                    console.warn(n.msg);
+                    locker[n.msg] = 1;
+                }
+            }
+            NotifyList_1.length = 0;
+            Started_1 = 0;
+        };
+        var ClearNotify = function (key) {
+            for (var i = NotifyList_1.length; i--;) {
+                var n = NotifyList_1[i];
+                if (n.key == key) {
+                    NotifyList_1.splice(i, 1);
+                }
+            }
+        };
+        var DelayNotify = function (key, msg) {
+            clearTimeout(NotifyTimer_1);
+            Started_1 = 0;
+            NotifyList_1.push({
+                key: key,
+                msg: msg
+            });
+            if (!Started_1) {
+                Started_1 = 1;
+                NotifyTimer_1 = setTimeout(Notify_1, 500);
+            }
+        };
+    }
     /**
      * 可观察的内存数据对象
      * @name State
@@ -1028,10 +1068,7 @@ KISSY.add('magix', function (S, SE, DOM) {
                     }
                 }, function (path, value) {
                     var sub = key ? key : path;
-                    console.warn('beware! You direct set "{Magix.State}.' + sub + '" a new value  You should call Magix.State.set() and Magix.State.digest() to notify other views {Magix.State} changed');
-                    if (G_IsPrimitive(value) && !/\./.test(sub)) {
-                        console.warn('beware! Never set a primitive value ' + JSON.stringify(value) + ' to "{Magix.State}.' + sub + '" This may will not trigger "changed" event');
-                    }
+                    DelayNotify(sub, 'beware! You direct modify "{Magix.State}.' + sub + '"  You should call Magix.State.set() and Magix.State.digest() to notify other views {Magix.State} changed');
                 });
             }
             return r;
@@ -1040,8 +1077,8 @@ KISSY.add('magix', function (S, SE, DOM) {
          * 设置数据
          * @param {Object} data 数据对象
          */
-        set: function (data) {
-            State_DataIsChanged = G_Set(data, State_AppData, State_ChangedKeys) || State_DataIsChanged;
+        set: function (data, unchanged) {
+            State_DataIsChanged = G_Set(data, State_AppData, State_ChangedKeys, unchanged) || State_DataIsChanged;
             if (DEBUG && Magix_Booted) {
                 var loc = Router.parse();
                 for (var p in data) {
@@ -1054,11 +1091,16 @@ KISSY.add('magix', function (S, SE, DOM) {
          * 检测数据变化，如果有变化则派发changed事件
          * @param  {Object} data 数据对象
          */
-        digest: function (data) {
+        digest: function (data, unchanged) {
             if (data) {
-                State.set(data);
+                State.set(data, unchanged);
             }
             if (State_DataIsChanged) {
+                if (DEBUG) {
+                    for (var p in State_ChangedKeys) {
+                        ClearNotify(p);
+                    }
+                }
                 State_DataIsChanged = 0;
                 this.fire(G_CHANGED, {
                     keys: State_ChangedKeys
@@ -1284,9 +1326,6 @@ KISSY.add('magix', function (S, SE, DOM) {
             query = G_ParseUri(srcQuery);
             hash = G_ParseUri(srcHash);
             params = G_Assign({}, query[G_PARAMS], hash[G_PARAMS]);
-            if (DEBUG) {
-                params = Safeguard(params);
-            }
             result = {
                 get: GetParam,
                 href: href,
@@ -1300,9 +1339,10 @@ KISSY.add('magix', function (S, SE, DOM) {
                 Router_AttachViewAndPath(result);
                 Router_HrefCache.set(href, result);
             }
-        }
-        if (DEBUG) {
-            result = Safeguard(result);
+            if (DEBUG) {
+                result.params = Safeguard(result.params);
+                result = Safeguard(result);
+            }
         }
         return result;
     };
@@ -1574,6 +1614,12 @@ KISSY.add('magix', function (S, SE, DOM) {
                 vframe: vframe,
                 fcc: fcc //fireChildrenCreated
             });
+            if (DEBUG) {
+                var nodes = G_DOCUMENT.querySelectorAll('#' + id);
+                if (nodes.length > 1) {
+                    Magix_Cfg.error(Error("remove vframe error. dom id:\"" + id + "\" duplicate"));
+                }
+            }
             id = G_GetById(id);
             if (id) {
                 id['$b'] = 0;
@@ -1602,14 +1648,19 @@ KISSY.add('magix', function (S, SE, DOM) {
         me = this;
         me.id = id;
         if (DEBUG) {
-            setTimeout(function () {
-                if (me.id && me.pId) {
-                    var parent = Vframe_Vframes[me.pId];
-                    if (me.id != Magix_Cfg.rootId && (!parent || !parent['$c'][me.id])) {
-                        console.error('beware! Avoid use new Magix.Vframe() outside');
-                    }
+            var bad = 0;
+            if (!pId && id != Magix_Cfg.rootId) {
+                bad = 1;
+            }
+            if (!bad && id && pId) {
+                var parent = Vframe_Vframes[pId];
+                if (!parent || !parent['$c'][id]) {
+                    bad = 1;
                 }
-            }, 0);
+            }
+            if (bad) {
+                console.error('beware! Avoid use new Magix.Vframe() outside');
+            }
         }
         //me.vId=id+'_v';
         me['$c'] = {}; //childrenMap
@@ -1667,20 +1718,20 @@ KISSY.add('magix', function (S, SE, DOM) {
          */
         mountView: function (viewPath, viewInitParams /*,keepPreHTML*/) {
             var me = this;
-            var id = me.id, pId = me.pId;
-            var node = G_GetById(id), po, sign, view, params, ctors, parentVf;
+            var id = me.id;
+            var node = G_GetById(id), pId = me.pId, po, sign, view, params, ctors, parentVf;
             if (!me['$h'] && node) { //alter
                 me['$h'] = 1;
                 me['$i'] = node.innerHTML; //.replace(ScriptsReg, ''); template
             }
             me.unmountView( /*keepPreHTML*/);
             me['$b'] = 0; //destroyed 详见unmountView
-            po = G_ParseUri(viewPath);
+            po = G_ParseUri(viewPath || G_EMPTY);
             view = po[G_PATH];
             if (node && view) {
                 me[G_PATH] = viewPath;
                 params = po[G_PARAMS];
-                parentVf = Vframe_TranslateQuery(pId, viewPath, params);
+                Vframe_TranslateQuery(pId, viewPath, params);
                 me['$j'] = po[G_PATH];
                 G_Assign(params, viewInitParams);
                 sign = me['$g'];
@@ -1690,7 +1741,7 @@ KISSY.add('magix', function (S, SE, DOM) {
                             return Magix_Cfg.error(Error("id:" + id + " cannot load:" + view));
                         }
                         ctors = View_Prepare(TView);
-                        view = new TView(id, me, params, ctors);
+                        view = new TView(id, me, params, node, ctors);
                         if (DEBUG) {
                             var viewProto_1 = TView.prototype;
                             var importantProps_1 = {
@@ -1719,7 +1770,10 @@ KISSY.add('magix', function (S, SE, DOM) {
                         me['$v'] = view;
                         me['$a'] = Dispatcher_UpdateTag;
                         View_DelegateEvents(view);
-                        params = G_ToTry(view.init, params, view);
+                        params = G_ToTry(view.init, [params, {
+                                node: node,
+                                deep: !view.tmpl
+                            }], view);
                         if (!params)
                             params = { then: function (f) { return f(); } };
                         sign = ++me['$g'];
@@ -1859,7 +1913,7 @@ KISSY.add('magix', function (S, SE, DOM) {
             for (var _a = 0, vfs_1 = vfs; _a < vfs_1.length; _a++) {
                 _b = vfs_1[_a], id = _b[0], vf = _b[1];
                 if (DEBUG && document.querySelectorAll("#" + id).length > 1) {
-                    Magix_Cfg.error(Error("dom id:\"" + id + "\" duplicate"));
+                    Magix_Cfg.error(Error("mount vframe error. dom id:\"" + id + "\" duplicate"));
                 }
                 if (DEBUG) {
                     if (vfs[id]) {
@@ -2012,7 +2066,7 @@ KISSY.add('magix', function (S, SE, DOM) {
      *
      *      fca firstChildrenAlter  fcc firstChildrenCreated
      */
-    DOM[G_PROTOTYPE].invokeView = function (name, args) {
+    SNode[G_PROTOTYPE].invokeView = function (name, args) {
         var returned = [], e, vf;
         for (var _i = 0, _a = this; _i < _a.length; _i++) {
             e = _a[_i];
@@ -2318,6 +2372,7 @@ KISSY.add('magix', function (S, SE, DOM) {
     //https://github.com/DylanPiercey/set-dom/blob/master/src/index.js
     //https://github.com/patrick-steele-idem/morphdom
     var I_SVGNS = 'http://www.w3.org/2000/svg';
+    var I_MATHNS = 'http://www.w3.org/1998/Math/MathML';
     var I_WrapMap = {
         // Support: IE <=9 only
         option: [1, '<select multiple>'],
@@ -2331,7 +2386,8 @@ KISSY.add('magix', function (S, SE, DOM) {
         area: [1, '<map>'],
         param: [1, '<object>'],
         g: [1, "<svg xmlns=\"" + I_SVGNS + "\">"],
-        all: [0, '']
+        m: [1, "<math xmlns=\"" + I_MATHNS + "\">"],
+        _: [0, '']
     };
     var I_RTagName = /<([a-z][^\/\0>\x20\t\r\n\f]+)/i;
     // Support: IE <=9 only
@@ -2354,8 +2410,17 @@ KISSY.add('magix', function (S, SE, DOM) {
     var I_GetNode = function (html, node) {
         var tmp = I_Doc.createElement('div');
         // Deserialize a standard representation
-        var tag = I_SVGNS == node.namespaceURI ? 'g' : (I_RTagName.exec(html) || [0, ''])[1].toLowerCase();
-        var wrap = I_WrapMap[tag] || I_WrapMap.all;
+        var ns = node.namespaceURI, tag;
+        if (ns == I_SVGNS) {
+            tag = 'g';
+        }
+        else if (ns == I_MATHNS) {
+            tag = 'm';
+        }
+        else {
+            tag = (I_RTagName.exec(html) || [0, ''])[1];
+        }
+        var wrap = I_WrapMap[tag] || I_WrapMap._;
         tmp.innerHTML = wrap[1] + html;
         // Descend through wrappers to the right content
         var j = wrap[0];
@@ -2444,7 +2509,7 @@ KISSY.add('magix', function (S, SE, DOM) {
     var I_SetChildNodes = function (oldParent, newParent, ref, vframe, keys) {
         var oldNode = oldParent.lastChild;
         var newNode = newParent.firstChild;
-        var tempNew, tempOld, extra = 0, nodeKey, foundNode, keyedNodes = {}, newKeyedNodes = {}, removed;
+        var tempNew, tempOld, extra = 0, nodeKey, foundNode, keyedNodes = {}, newKeyedNodes = {}, next;
         // Extract keyed nodes from previous children and keep track of total count.
         while (oldNode) {
             extra++;
@@ -2465,12 +2530,12 @@ KISSY.add('magix', function (S, SE, DOM) {
         while (newNode) {
             nodeKey = I_GetCompareKey(newNode);
             if (nodeKey) {
-                newKeyedNodes[nodeKey] = 1;
+                newKeyedNodes[nodeKey] = (newKeyedNodes[nodeKey] || 0) + 1;
             }
             newNode = newNode.nextSibling;
         }
         newNode = newParent.firstChild;
-        removed = newParent.childNodes.length < extra;
+        //removed = newParent.childNodes.length < extra;
         oldNode = oldParent.firstChild;
         while (newNode) {
             extra--;
@@ -2479,18 +2544,25 @@ KISSY.add('magix', function (S, SE, DOM) {
             nodeKey = I_GetCompareKey(tempNew);
             foundNode = keyedNodes[nodeKey];
             if (foundNode && (foundNode = foundNode.pop())) {
-                if (foundNode != oldNode) { //如果找到的节点和当前不同，则移动
-                    if (removed && oldNode.nextSibling == foundNode) {
-                        oldParent.appendChild(oldNode);
-                        oldNode = foundNode.nextSibling;
-                    }
-                    else {
-                        oldParent.insertBefore(foundNode, oldNode);
-                    }
+                while (foundNode != oldNode) {
+                    next = oldNode.nextSibling;
+                    oldParent.appendChild(oldNode);
+                    oldNode = next;
                 }
-                else {
-                    oldNode = oldNode.nextSibling;
+                oldNode = foundNode.nextSibling;
+                if (newKeyedNodes[nodeKey]) {
+                    newKeyedNodes[nodeKey]--;
                 }
+                // if (foundNode != oldNode) {//如果找到的节点和当前不同，则移动
+                //     if (removed && oldNode.nextSibling == foundNode) {
+                //         oldParent.appendChild(oldNode);
+                //         oldNode = foundNode.nextSibling;
+                //     } else {
+                //         oldParent.insertBefore(foundNode, oldNode);
+                //     }
+                // } else {
+                //     oldNode = oldNode.nextSibling;
+                // }
                 I_SetNode(foundNode, tempNew, oldParent, ref, vframe, keys);
             }
             else if (oldNode) {
@@ -2499,6 +2571,8 @@ KISSY.add('magix', function (S, SE, DOM) {
                 if (nodeKey && keyedNodes[nodeKey] && newKeyedNodes[nodeKey]) {
                     extra++;
                     ref.c = 1;
+                    //ref.n.push([8, oldParent, tempNew, tempOld]);
+                    //I_LazyId(ref, tempNew);
                     // If the old child had a key we skip over it until the end.
                     oldParent.insertBefore(tempNew, tempOld);
                 }
@@ -2509,16 +2583,25 @@ KISSY.add('magix', function (S, SE, DOM) {
                 }
             }
             else {
+                //I_LazyId(ref, tempNew);
                 // Finally if there was no old node we add the new node.
-                oldParent.appendChild(tempNew);
+                //oldParent.appendChild(tempNew);
                 ref.c = 1;
+                ref.n.push([1, oldParent, tempNew]);
             }
         }
         // If we have any remaining unkeyed nodes remove them from the end.
+        tempOld = oldParent.lastChild;
         while (extra-- > 0) {
-            tempOld = oldParent.lastChild;
             I_UnmountVframs(vframe, tempOld);
-            oldParent.removeChild(tempOld);
+            if (DEBUG) {
+                if (!tempOld.parentNode) {
+                    console.error('Avoid remove node on view.destroy in digesting');
+                }
+            }
+            ref.n.push([2, oldParent, tempOld]);
+            tempOld = tempOld.previousSibling;
+            //oldParent.removeChild(tempOld);
             ref.c = 1;
         }
     };
@@ -2550,8 +2633,7 @@ KISSY.add('magix', function (S, SE, DOM) {
                     // If we have the same nodename then we can directly update the attributes.
                     var newMxView = newNode.getAttribute(G_MX_VIEW), newHTML = newNode.innerHTML;
                     var newStaticAttrKey = newNode.getAttribute(G_Tag_Attr_Key);
-                    var updateAttribute = !newStaticAttrKey ||
-                        newStaticAttrKey != oldNode.getAttribute(G_Tag_Attr_Key), updateChildren = void 0, unmountOld = void 0, oldVf = Vframe_Vframes[oldNode.id], assign = void 0, view = void 0, uri = newMxView && G_ParseUri(newMxView), params = void 0, htmlChanged = void 0, paramsChanged = void 0;
+                    var updateAttribute = !newStaticAttrKey || newStaticAttrKey != oldNode.getAttribute(G_Tag_Attr_Key), updateChildren = void 0, unmountOld = void 0, oldVf = Vframe_Vframes[oldNode.id], assign = void 0, view = void 0, uri = newMxView && G_ParseUri(newMxView), params = void 0, htmlChanged = void 0, paramsChanged = void 0;
                     if (newMxView && oldVf &&
                         (!newNode.id || newNode.id == oldNode.id) &&
                         oldVf['$j'] == uri[G_PATH] &&
@@ -2577,6 +2659,7 @@ KISSY.add('magix', function (S, SE, DOM) {
                                 }
                             }
                         }
+                        //目前属性变化并不更新view,如果要更新，只需要再判断下updateAttribute即可
                         if (paramsChanged || htmlChanged || hasMXV) {
                             assign = view['$e'] && view['$f'];
                             if (assign) {
@@ -2590,12 +2673,13 @@ KISSY.add('magix', function (S, SE, DOM) {
                                     node: newNode,
                                     //html: newHTML,
                                     deep: !view.tmpl,
-                                    mxv: hasMXV,
+                                    attr: updateAttribute,
+                                    //mxv: hasMXV,
                                     inner: htmlChanged,
                                     query: paramsChanged,
                                     keys: keys
                                 };
-                                updateAttribute = 1;
+                                //updateAttribute = 1;
                                 /*if (updateAttribute) {
                                     updateAttribute = G_EMPTY;
                                     I_SetAttributes(oldNode, newNode, ref, 1);
@@ -2611,10 +2695,9 @@ KISSY.add('magix', function (S, SE, DOM) {
                                 unmountOld = 1;
                                 updateChildren = 1;
                             }
-                        }
-                        else { //view没发生变化，则只更新特别的几个属性
-                            updateAttribute = 1;
-                        }
+                        } //else {//view没发生变化，则只更新特别的几个属性
+                        //updateAttribute = 1;
+                        //}
                     }
                     else {
                         updateChildren = 1;
@@ -2642,13 +2725,46 @@ KISSY.add('magix', function (S, SE, DOM) {
             else {
                 // we have to replace the node.
                 I_UnmountVframs(vf, oldNode);
-                oldParent.replaceChild(newNode, oldNode);
+                //I_LazyId(ref, newNode);
+                //oldParent.replaceChild(newNode, oldNode);
                 ref.c = 1;
+                ref.n.push([4, oldParent, newNode, oldNode]);
             }
         }
     };
+    var Updater_EM = {
+        '&': 'amp',
+        '<': 'lt',
+        '>': 'gt',
+        '"': '#34',
+        '\'': '#39',
+        '\`': '#96'
+    };
+    var Updater_ER = /[&<>"'\`]/g;
+    var Updater_Safeguard = function (v) { return '' + (v == null ? '' : v); };
+    var Updater_EncodeReplacer = function (m) { return "&" + Updater_EM[m] + ";"; };
+    var Updater_Encode = function (v) { return Updater_Safeguard(v).replace(Updater_ER, Updater_EncodeReplacer); };
+    var Updater_Ref = function ($$, v, k, f) {
+        for (f = $$[G_SPLITER]; --f;)
+            if ($$[k = G_SPLITER + f] === v)
+                return k;
+        $$[k = G_SPLITER + $$[G_SPLITER]++] = v;
+        return k;
+    };
+    var Updater_UM = {
+        '!': '%21',
+        '\'': '%27',
+        '(': '%28',
+        ')': '%29',
+        '*': '%2A'
+    };
+    var Updater_URIReplacer = function (m) { return Updater_UM[m]; };
+    var Updater_URIReg = /[!')(*]/g;
+    var Updater_EncodeURI = function (v) { return encodeURIComponent(Updater_Safeguard(v)).replace(Updater_URIReg, Updater_URIReplacer); };
+    var Updater_QR = /[\\'"]/g;
+    var Updater_EncodeQ = function (v) { return Updater_Safeguard(v).replace(Updater_QR, '\\$&'); };
     var Updater_Digest = function (updater, digesting) {
-        var keys = updater['$k'], changed = updater['$c'], selfId = updater['$b'], vf = Vframe_Vframes[selfId], view = vf && vf['$v'], ref = { d: [], v: [] }, node = G_GetById(selfId), tmpl, vdom, data = updater['$d'], refData = updater['$a'], redigest = function (trigger) {
+        var keys = updater['$k'], changed = updater['$c'], selfId = updater['$b'], vf = Vframe_Vframes[selfId], view = vf && vf['$v'], ref = { d: [], v: [], n: [] }, node = G_GetById(selfId), tmpl, vdom, data = updater['$d'], refData = updater['$a'], redigest = function (trigger) {
             if (digesting.i < digesting.length) {
                 Updater_Digest(updater, digesting);
             }
@@ -2672,18 +2788,37 @@ KISSY.add('magix', function (S, SE, DOM) {
             view.fire('dompatch');
             delete Body_RangeEvents[selfId];
             delete Body_RangeVframes[selfId];
-            console.time('[updater time:' + selfId + ']');
-            vdom = I_GetNode(tmpl(data, selfId, refData), node);
+            vdom = I_GetNode(tmpl(data, selfId, refData, Updater_Encode, Updater_Safeguard, Updater_EncodeURI, Updater_Ref, Updater_EncodeQ), node);
             I_SetChildNodes(node, vdom, ref, vf, keys);
             for (var _i = 0, _a = ref.d; _i < _a.length; _i++) {
                 vdom = _a[_i];
                 vdom[0].id = vdom[1];
             }
-            for (var _b = 0, _c = ref.v; _b < _c.length; _b++) {
+            for (var _b = 0, _c = ref.n; _b < _c.length; _b++) {
                 vdom = _c[_b];
+                if (vdom[0] == 1) {
+                    vdom[1].appendChild(vdom[2]);
+                }
+                else if (vdom[0] == 2) {
+                    vdom[1].removeChild(vdom[2]);
+                }
+                else {
+                    vdom[1].replaceChild(vdom[2], vdom[3]);
+                }
+            }
+            /*
+                在dom diff patch时，如果已渲染的vframe有变化，则会在vom tree上先派发created事件，同时传递inner标志，vom tree处理alter事件派发状态，未进入created事件派发状态
+    
+                patch完成后，需要设置vframe hold fire created事件，因为带有assign方法的view在调用render后，vom tree处于就绪状态，此时会导致提前派发created事件，应该hold，统一在endUpdate中派发
+    
+                有可能不需要endUpdate，所以hold fire要视情况而定
+            */
+            vf['$d'] = tmpl = ref.c || !view['$e'];
+            for (var _d = 0, _e = ref.v; _d < _e.length; _d++) {
+                vdom = _e[_d];
                 vdom['$b']();
             }
-            if (ref.c || !view['$e']) {
+            if (tmpl) {
                 view.endUpdate(selfId);
             }
             if (ref.c) {
@@ -2691,7 +2826,6 @@ KISSY.add('magix', function (S, SE, DOM) {
                     vId: selfId
                 });
             }
-            console.timeEnd('[updater time:' + selfId + ']');
             redigest(1);
         }
         else {
@@ -2777,9 +2911,9 @@ KISSY.add('magix', function (S, SE, DOM) {
          *     console.log(this.updater.get('a'));
          * }
          */
-        set: function (obj) {
+        set: function (obj, unchanged) {
             var me = this;
-            me['$c'] = G_Set(obj, me['$d'], me['$k']) || me['$c'];
+            me['$c'] = G_Set(obj, me['$d'], me['$k'], unchanged) || me['$c'];
             return me;
         },
         /**
@@ -2792,8 +2926,8 @@ KISSY.add('magix', function (S, SE, DOM) {
          *     }).digest();
          * }
          */
-        digest: function (data, resolve) {
-            var me = this.set(data), digesting = me['$e'];
+        digest: function (data, unchanged, resolve) {
+            var me = this.set(data, unchanged), digesting = me['$e'];
             /*
                 view:
                 <div>
@@ -2809,7 +2943,9 @@ KISSY.add('magix', function (S, SE, DOM) {
     
                 如果在digest的过程中，多次调用自身的digest，则后续的进行排队。前面的执行完成后，排队中的一次执行完毕
             */
-            digesting.push(resolve);
+            if (resolve) {
+                digesting.push(resolve);
+            }
             if (!digesting.i) {
                 Updater_Digest(me, digesting);
             }
@@ -2887,7 +3023,7 @@ KISSY.add('magix', function (S, SE, DOM) {
             return G_ParseExpr(origin, this['$a']);
         }
     });
-    var View_EvtMethodReg = /^(\$?)([^<]*)<([^>]+)>$/;
+    var View_EvtMethodReg = /^(\$?)([^<]*)<([^>]+)>(?:&(.+))?$/;
     var processMixinsSameEvent = function (exist, additional, temp) {
         if (exist['a']) {
             temp = exist;
@@ -2943,16 +3079,17 @@ KISSY.add('magix', function (S, SE, DOM) {
         };
     };
     var View_DelegateEvents = function (me, destroy) {
-        var e, eo = me["$eo"], so = me["$so"], el = me["$el"], id = me.id; //eventsObject
-        for (e in eo) {
-            Body_DOMEventBind(e, so[e], destroy);
+        var e, eventsObject = me["$eo"], selectorObject = me["$so"], eventsList = me["$el"], id = me.id; //eventsObject
+        for (e in eventsObject) {
+            Body_DOMEventBind(e, selectorObject[e], destroy);
         }
-        for (var _i = 0, el_1 = el; _i < el_1.length; _i++) {
-            e = el_1[_i];
+        for (var _i = 0, eventsList_1 = eventsList; _i < eventsList_1.length; _i++) {
+            e = eventsList_1[_i];
             G_DOMEventLibBind(e.e, e.n, G_DOMGlobalProcessor, destroy, {
                 i: id,
                 v: me,
                 f: e.f,
+                m: e.m,
                 e: e.e
             });
         }
@@ -3008,12 +3145,19 @@ KISSY.add('magix', function (S, SE, DOM) {
         var ctors = [];
         if (ctor)
             ctors.push(ctor);
-        function NView(d, a, b, c, cs, z) {
-            me.call(z = this, d, a, b);
+        function NView(nodeId, ownerVf, initParams, node, mixinCtors, cs, z, params, concatCtors) {
+            me.call(z = this, nodeId, ownerVf, initParams, node, mixinCtors);
             cs = NView._;
+            params = [initParams, {
+                    node: node,
+                    deep: !z.tmpl
+                }];
             if (cs)
-                G_ToTry(cs, a, z);
-            G_ToTry(ctors.concat(c), b, z);
+                G_ToTry(cs, params, z);
+            concatCtors = ctors.concat(mixinCtors);
+            if (concatCtors.length) {
+                G_ToTry(concatCtors, params, z);
+            }
         }
         NView.merge = merge;
         NView.extend = extend;
@@ -3027,7 +3171,7 @@ KISSY.add('magix', function (S, SE, DOM) {
     var View_Prepare = function (oView) {
         if (!oView[G_SPLITER]) { //只处理一次
             oView[G_SPLITER] = [];
-            var prop = oView[G_PROTOTYPE], currentFn = void 0, matches = void 0, selectorOrCallback = void 0, events = void 0, eventsObject = {}, eventsList = [], selectorObject = {}, node = void 0, isSelector = void 0, p = void 0, item = void 0, mask = void 0;
+            var prop = oView[G_PROTOTYPE], currentFn = void 0, matches = void 0, selectorOrCallback = void 0, events = void 0, eventsObject = {}, eventsList = [], selectorObject = {}, node = void 0, isSelector = void 0, p = void 0, item = void 0, mask = void 0, mod = void 0, modifiers = void 0;
             matches = prop.mixins;
             if (matches) {
                 View_MergeMixins(matches, prop, oView[G_SPLITER]);
@@ -3036,10 +3180,18 @@ KISSY.add('magix', function (S, SE, DOM) {
                 currentFn = prop[p];
                 matches = p.match(View_EvtMethodReg);
                 if (matches) {
-                    isSelector = matches[1], selectorOrCallback = matches[2], events = matches[3];
+                    isSelector = matches[1], selectorOrCallback = matches[2], events = matches[3], modifiers = matches[4];
+                    mod = {};
+                    if (modifiers) {
+                        modifiers = modifiers.split(G_COMMA);
+                        for (var _i = 0, modifiers_1 = modifiers; _i < modifiers_1.length; _i++) {
+                            item = modifiers_1[_i];
+                            mod[item] = true;
+                        }
+                    }
                     events = events.split(G_COMMA);
-                    for (var _i = 0, events_1 = events; _i < events_1.length; _i++) {
-                        item = events_1[_i];
+                    for (var _a = 0, events_1 = events; _a < events_1.length; _a++) {
+                        item = events_1[_a];
                         node = View_Globals[selectorOrCallback];
                         mask = 1;
                         if (isSelector) {
@@ -3047,7 +3199,8 @@ KISSY.add('magix', function (S, SE, DOM) {
                                 eventsList.push({
                                     f: currentFn,
                                     e: node,
-                                    n: item
+                                    n: item,
+                                    m: mod
                                 });
                                 continue;
                             }
@@ -3146,7 +3299,7 @@ KISSY.add('magix', function (S, SE, DOM) {
      *      alert(e.type);//可通过type识别是哪种事件类型
      *  }
      */
-    function View(id, owner, ops, me) {
+    function View(id, owner, ops, node, me) {
         me = this;
         me.owner = owner;
         me.id = id;
@@ -3158,7 +3311,10 @@ KISSY.add('magix', function (S, SE, DOM) {
         me.updater = me['$d'] = new Updater(me.id);
         id = View._;
         if (id)
-            G_ToTry(id, ops, me);
+            G_ToTry(id, [ops, {
+                    node: node,
+                    deep: !me.tmpl
+                }], me);
     }
     G_Assign(View, {
         /**

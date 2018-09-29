@@ -20,9 +20,9 @@ let Async_Rest = 16;
 let Async_CheckStatus = id => {
     let task = Async_TasksMap[id];
     if (task && task['@{~task#work.index}'] >= task.length) {
-        task['@{~task#done}']();
         task.length = 0;
         delete Async_TasksMap[id];
+        task['@{~task#done}']();
     }
 };
 let Async_RunTask = (last, one, task) => {
@@ -68,7 +68,7 @@ let Async_DeleteTask = id => {
 let Async_SetNewTask = (vf, cb) => {
     let task, i = 0, tasks = Async_TasksMap[vf.id];
     if (tasks) {
-        console.log('clear tasks', vf.id, tasks.length);
+        //console.log('clear tasks', vf.id, tasks.length);
         tasks.length = 0;
     } else {
         tasks = [];

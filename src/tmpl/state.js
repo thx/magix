@@ -64,6 +64,42 @@ if (DEBUG) {
     }, 0);
 }
 /*#}#*/
+if (DEBUG) {
+    let Started = 0;
+    let NotifyList = [];
+    let NotifyTimer = 0;
+    let Notify = () => {
+        let locker = {};
+        for (let n of NotifyList) {
+            if (!locker[n.msg]) {
+                console.warn(n.msg);
+                locker[n.msg] = 1;
+            }
+        }
+        NotifyList.length = 0;
+        Started = 0;
+    };
+    var ClearNotify = key => {
+        for (let i = NotifyList.length; i--;) {
+            let n = NotifyList[i];
+            if (n.key == key) {
+                NotifyList.splice(i, 1);
+            }
+        }
+    };
+    var DelayNotify = (key, msg) => {
+        clearTimeout(NotifyTimer);
+        Started = 0;
+        NotifyList.push({
+            key,
+            msg
+        });
+        if (!Started) {
+            Started = 1;
+            NotifyTimer = setTimeout(Notify, 500);
+        }
+    };
+}
 /**
  * 可观察的内存数据对象
  * @name State
@@ -105,10 +141,7 @@ let State = {
                 /*#}#*/
             }, (path, value) => {
                 let sub = key ? key : path;
-                console.warn('beware! You direct set "{Magix.State}.' + sub + '" a new value  You should call Magix.State.set() and Magix.State.digest() to notify other views {Magix.State} changed');
-                if (G_IsPrimitive(value) && !/\./.test(sub)) {
-                    console.warn('beware! Never set a primitive value ' + JSON.stringify(value) + ' to "{Magix.State}.' + sub + '" This may will not trigger "changed" event');
-                }
+                DelayNotify(sub, 'beware! You direct modify "{Magix.State}.' + sub + '"  You should call Magix.State.set() and Magix.State.digest() to notify other views {Magix.State} changed');
             });
         }
         return r;
@@ -117,8 +150,8 @@ let State = {
      * 设置数据
      * @param {Object} data 数据对象
      */
-    set(data) {
-        State_DataIsChanged = G_Set(data, State_AppData, State_ChangedKeys) || State_DataIsChanged;
+    set(data, unchanged) {
+        State_DataIsChanged = G_Set(data, State_AppData, State_ChangedKeys, unchanged) || State_DataIsChanged;
         /*#if(modules.router){#*/
         if (DEBUG && Magix_Booted) {
             let loc = Router.parse();
@@ -133,11 +166,16 @@ let State = {
      * 检测数据变化，如果有变化则派发changed事件
      * @param  {Object} data 数据对象
      */
-    digest(data) {
+    digest(data, unchanged) {
         if (data) {
-            State.set(data);
+            State.set(data, unchanged);
         }
         if (State_DataIsChanged) {
+            if (DEBUG) {
+                for (let p in State_ChangedKeys) {
+                    ClearNotify(p);
+                }
+            }
             State_DataIsChanged = 0;
             this.fire(G_CHANGED, {
                 keys: State_ChangedKeys

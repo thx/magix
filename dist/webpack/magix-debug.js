@@ -1,19 +1,21 @@
 //#snippet;
 //#uncheck = jsThis,jsLoop;
 //#exclude = loader,allProcessor;
-/*!3.8.11 Licensed MIT*/
+/*!3.8.12 Licensed MIT*/
 /*
 author:kooboy_li@163.com
 loader:webpack
 enables:style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,viewInitAsync
 
-optionals:updaterVDOM,updaterAsync,serviceCombine,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,collectView,layerVframe,share,mxViewAttr,keepHTML,eventEnterLeave,naked,vdom
+optionals:updaterVDOM,updaterQuick,updaterAsync,updaterTouchAttr,serviceCombine,servicePush,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,vframeHost,layerVframe,collectView,share,keepHTML,naked,viewChildren,dispatcherRecast
 */
 module.exports = (() => {
     if (typeof DEBUG == 'undefined') window.DEBUG = true;
+    
     let $ = require('$');
     let G_IsObject = $.isPlainObject;
     let G_IsArray = $.isArray;
+    
     let G_COUNTER = 0;
 let G_EMPTY = '';
 let G_EMPTY_ARRAY = [];
@@ -33,6 +35,7 @@ let G_VALUE = 'value';
 let G_Tag_Key = 'mxs';
 let G_Tag_Attr_Key = 'mxa';
 let G_Tag_View_Key = 'mxv';
+
 let G_HashKey = '#';
 function G_NOOP() { }
 
@@ -65,22 +68,20 @@ let Magix_Cfg = {
     defaultView: MxGlobalView,
     
     error(e) {
-        Timeout(() => {
-            throw e;
-        });
+        throw e;
     }
 };
 
 let G_GetById = id => typeof id == Magix_StrObject ? id : G_DOCUMENT.getElementById(id);
 
 let G_IsPrimitive = args => !args || typeof args != Magix_StrObject;
-let G_Set = (newData, oldData, keys) => {
+let G_Set = (newData, oldData, keys, unchanged) => {
     let changed = 0,
         now, old, p;
     for (p in newData) {
         now = newData[p];
         old = oldData[p];
-        if (!G_IsPrimitive(now) || old !== now) {
+        if ((!G_IsPrimitive(now) || old !== now) && !G_Has(unchanged, p)) {
             keys[p] = 1;
             changed = 1;
         }
@@ -123,6 +124,9 @@ let View_ApplyStyle = (key, css) => {
     if (css && !View_ApplyStyle[key]) {
         View_ApplyStyle[key] = 1;
         if (DEBUG) {
+            if (key.indexOf('$throw_') === 0) {
+                throw new Error(css);
+            }
             
             Header.append(`<style id="${key}">${css}`);
             
@@ -296,13 +300,13 @@ G_Assign(G_Cache[G_PROTOTYPE], {
     }
 });
     let G_IsFunction = $.isFunction;
+    let mxViews = Magix_Cfg.views = {};
     
     let coreDefaultView;
     
     let G_Require = (name, fn) => {
-        let views = Magix_Cfg.views || G_NOOP;
         
-        if (!views[MxGlobalView]) views[MxGlobalView] = coreDefaultView;
+        if (!mxViews[MxGlobalView]) mxViews[MxGlobalView] = coreDefaultView;
         
         if (!name) {
             return fn();
@@ -332,12 +336,12 @@ G_Assign(G_Cache[G_PROTOTYPE], {
             }
         };
         for (let i = 0; i < name.length; i++) {
-            view = views[name[i]];
+            view = mxViews[name[i]];
             if (G_IsFunction(view) && !view.extend) {
                 promiseCount++;
                 promise(view, i);
             } else {
-                results[i] = views[name[i]];
+                results[i] = mxViews[name[i]];
             }
         }
         checkCount();
@@ -353,6 +357,8 @@ let G_Extend = (ctor, base, props, statics, cProto) => {
     ctor[G_PROTOTYPE] = cProto;
     return ctor;
 };
+
+    
     let G_SelectorEngine = $.find || $.zepto;
     let G_TargetMatchSelector = G_SelectorEngine.matchesSelector || G_SelectorEngine.matches;
     let G_DOMGlobalProcessor = (e, d) => {
@@ -360,7 +366,6 @@ let G_Extend = (ctor, base, props, statics, cProto) => {
         e.eventTarget = d.e;
         G_ToTry(d.f, e, d.v);
     };
-    
     let G_DOMEventLibBind = (node, type, cb, remove, scope) => {
         if (scope) {
             type += `.${scope.i}`;
@@ -373,54 +378,56 @@ let G_Extend = (ctor, base, props, statics, cProto) => {
     };
     
 
-    if (DEBUG) {
-    var Safeguard;
-    if (window.Proxy) {
-        let ProxiesPool = new Map();
-        Safeguard = (data, getter, setter) => {
-            if (G_IsPrimitive(data)) {
-                return data;
+    let Safeguard = data => data;
+if (DEBUG && window.Proxy) {
+    let ProxiesPool = new Map();
+    Safeguard = (data, getter, setter) => {
+        if (G_IsPrimitive(data)) {
+            return data;
+        }
+        let build = (prefix, o) => {
+            let key = getter + '\x01' + setter;
+            let cached = ProxiesPool.get(o);
+            if (cached && cached.key == key) {
+                return cached.entity;
             }
-            let build = (prefix, o) => {
-                let key = getter + '\x01' + setter;
-                let cached = ProxiesPool.get(o);
-                if (cached && cached.key == key) {
-                    return cached.entity;
-                }
-                let entity = new Proxy(o, {
-                    set(target, property, value) {
-                        if (!setter && !prefix) {
-                            throw new Error('avoid writeback,key: ' + prefix + property + ' value:' + value + ' more info: https://github.com/thx/magix/issues/38');
-                        }
-                        target[property] = value;
-                        if (setter) {
-                            setter(prefix + property, value);
-                        }
-                        return true;
-                    },
-                    get(target, property) {
-                        let out = target[property];
-                        if (!prefix && getter) {
-                            getter(property);
-                        }
-                        if (G_Has(target, property) &&
-                            (G_IsArray(out) || G_IsObject(out))) {
-                            return build(prefix + property + '.', out);
-                        }
-                        return out;
+            if (o['\x1e_sf_\x1e']) {
+                return o;
+            }
+            let entity = new Proxy(o, {
+                set(target, property, value) {
+                    if (!setter && !prefix) {
+                        throw new Error('avoid writeback,key: ' + prefix + property + ' value:' + value + ' more info: https://github.com/thx/magix/issues/38');
                     }
-                });
-                ProxiesPool.set(o, {
-                    key,
-                    entity
-                });
-                return entity;
-            };
-            return build('', data);
+                    target[property] = value;
+                    if (setter) {
+                        setter(prefix + property, value);
+                    }
+                    return true;
+                },
+                get(target, property) {
+                    if (property == '\x1e_sf_\x1e') {
+                        return true;
+                    }
+                    let out = target[property];
+                    if (!prefix && getter) {
+                        getter(property);
+                    }
+                    if (G_Has(target, property) &&
+                        (G_IsArray(out) || G_IsObject(out))) {
+                        return build(prefix + property + '.', out);
+                    }
+                    return out;
+                }
+            });
+            ProxiesPool.set(o, {
+                key,
+                entity
+            });
+            return entity;
         };
-    } else {
-        Safeguard = data => data;
-    }
+        return build('', data);
+    };
 }
     let Magix_PathToObjCache = new G_Cache();
 let Magix_Booted = 0;
@@ -429,7 +436,7 @@ let Magix_ParamsObjectTemp;
 let Magix_ParamsFn = (match, name, value) => {
     try {
         value = decodeURIComponent(value);
-    } catch(_magix) {
+    } catch (_magix) {
 
     }
     Magix_ParamsObjectTemp[name] = value;
@@ -909,7 +916,9 @@ let Magix = {
     guid: G_Id,
     use: G_Require,
     Cache: G_Cache,
-    nodeId: IdIt
+    
+    nodeId: IdIt,
+    guard: Safeguard
 };
     
 /**
@@ -1077,6 +1086,42 @@ if (DEBUG) {
     }, 0);
 }
 
+if (DEBUG) {
+    let Started = 0;
+    let NotifyList = [];
+    let NotifyTimer = 0;
+    let Notify = () => {
+        let locker = {};
+        for (let n of NotifyList) {
+            if (!locker[n.msg]) {
+                console.warn(n.msg);
+                locker[n.msg] = 1;
+            }
+        }
+        NotifyList.length = 0;
+        Started = 0;
+    };
+    var ClearNotify = key => {
+        for (let i = NotifyList.length; i--;) {
+            let n = NotifyList[i];
+            if (n.key == key) {
+                NotifyList.splice(i, 1);
+            }
+        }
+    };
+    var DelayNotify = (key, msg) => {
+        clearTimeout(NotifyTimer);
+        Started = 0;
+        NotifyList.push({
+            key,
+            msg
+        });
+        if (!Started) {
+            Started = 1;
+            NotifyTimer = setTimeout(Notify, 500);
+        }
+    };
+}
 /**
  * 可观察的内存数据对象
  * @name State
@@ -1118,10 +1163,7 @@ let State = {
                 
             }, (path, value) => {
                 let sub = key ? key : path;
-                console.warn('beware! You direct set "{Magix.State}.' + sub + '" a new value  You should call Magix.State.set() and Magix.State.digest() to notify other views {Magix.State} changed');
-                if (G_IsPrimitive(value) && !/\./.test(sub)) {
-                    console.warn('beware! Never set a primitive value ' + JSON.stringify(value) + ' to "{Magix.State}.' + sub + '" This may will not trigger "changed" event');
-                }
+                DelayNotify(sub, 'beware! You direct modify "{Magix.State}.' + sub + '"  You should call Magix.State.set() and Magix.State.digest() to notify other views {Magix.State} changed');
             });
         }
         return r;
@@ -1130,8 +1172,8 @@ let State = {
      * 设置数据
      * @param {Object} data 数据对象
      */
-    set(data) {
-        State_DataIsChanged = G_Set(data, State_AppData, State_ChangedKeys) || State_DataIsChanged;
+    set(data, unchanged) {
+        State_DataIsChanged = G_Set(data, State_AppData, State_ChangedKeys, unchanged) || State_DataIsChanged;
         
         if (DEBUG && Magix_Booted) {
             let loc = Router.parse();
@@ -1146,11 +1188,16 @@ let State = {
      * 检测数据变化，如果有变化则派发changed事件
      * @param  {Object} data 数据对象
      */
-    digest(data) {
+    digest(data, unchanged) {
         if (data) {
-            State.set(data);
+            State.set(data, unchanged);
         }
         if (State_DataIsChanged) {
+            if (DEBUG) {
+                for (let p in State_ChangedKeys) {
+                    ClearNotify(p);
+                }
+            }
             State_DataIsChanged = 0;
             this.fire(G_CHANGED, {
                 keys: State_ChangedKeys
@@ -1306,6 +1353,7 @@ let Router_PNR_Routers, Router_PNR_UnmatchView, /*Router_PNR_IsFun,*/
 let Router_PNR_Rewrite;
 
 
+
 let DefaultTitle = G_DOCUMENT.title;
 
 let Router_AttachViewAndPath = (loc, view) => {
@@ -1323,6 +1371,7 @@ let Router_AttachViewAndPath = (loc, view) => {
         //if (!G_IsFunction(Router_PNR_Rewrite)) {
         //    Router_PNR_Rewrite = G_NULL;
         //}
+        
         
     }
     if (!loc[Router_VIEW]) {
@@ -1413,9 +1462,6 @@ let Router_Parse = href => {
             ...query[G_PARAMS]
             , ...hash[G_PARAMS]
         };
-        if (DEBUG) {
-            params = Safeguard(params);
-        }
         result = {
             get: GetParam,
             href,
@@ -1429,9 +1475,10 @@ let Router_Parse = href => {
             Router_AttachViewAndPath(result);
             Router_HrefCache.set(href, result);
         }
-    }
-    if (DEBUG) {
-        result = Safeguard(result);
+        if (DEBUG) {
+            result.params = Safeguard(result.params);
+            result = Safeguard(result);
+        }
     }
     return result;
 };
@@ -1556,7 +1603,6 @@ let Router = {
 Magix.Router = Router;
     
     
-    
     let Dispatcher_UpdateTag = 0;
 /**
  * 通知当前vframe，地址栏发生变化
@@ -1611,13 +1657,18 @@ let Dispatcher_Update = (vframe,  stateKeys,  view, isChanged, cs, c) => {
  * @private
  */
 let Dispatcher_NotifyChange = (e, vf, view) => {
-    vf = Vframe_Root();
-    if ((view = e[Router_VIEW])) {
-        vf.mountView(view.to);
-    } else {
-        Dispatcher_UpdateTag = G_COUNTER++;
-        Dispatcher_Update(vf , e.keys );
-    }
+    
+        vf = Vframe_Root();
+        
+        if ((view = e[Router_VIEW])) {
+            vf.mountView(view.to);
+        } else {
+            Dispatcher_UpdateTag = G_COUNTER++;
+            Dispatcher_Update(vf , e.keys );
+
+        
+        }
+        
 };
     
     
@@ -1726,6 +1777,12 @@ let Vframe_RemoveVframe = (id, fcc, vframe) => {
             fcc //fireChildrenCreated
         });
         
+        if (DEBUG) {
+            let nodes = G_DOCUMENT.querySelectorAll('#' + id);
+            if (nodes.length > 1) {
+                Magix_Cfg.error(Error(`remove vframe error. dom id:"${id}" duplicate`));
+            }
+        }
         id = G_GetById(id);
         if (id) {
             id['$b'] = 0;
@@ -1754,18 +1811,23 @@ let Vframe_RemoveVframe = (id, fcc, vframe) => {
  * @property {String} path 当前view的路径名，包括参数
  * @property {String} pId 父vframe的id，如果是根节点则为undefined
  */
-function Vframe(id, pId, me) {
+function Vframe(id, pId,  me) {
     me = this;
     me.id = id;
     if (DEBUG) {
-        setTimeout(() => {
-            if (me.id && me.pId) {
-                let parent = Vframe_Vframes[me.pId];
-                if (me.id != Magix_Cfg.rootId && (!parent || !parent['$c'][me.id])) {
-                    console.error('beware! Avoid use new Magix.Vframe() outside');
-                }
+        let bad = 0;
+        if (!pId && id != Magix_Cfg.rootId) {
+            bad = 1;
+        }
+        if (!bad && id && pId) {
+            let parent = Vframe_Vframes[pId];
+            if (!parent || !parent['$c'][id]) {
+                bad = 1;
             }
-        }, 0);
+        }
+        if (bad) {
+            console.error('beware! Avoid use new Magix.Vframe() outside');
+        }
     }
     //me.vId=id+'_v';
     me['$c'] = {}; //childrenMap
@@ -1778,8 +1840,11 @@ function Vframe(id, pId, me) {
     
     
     me.pId = pId;
+
+    
     Vframe_AddVframe(id, me);
 }
+
 G_Assign(Vframe, {
     /**
      * @lends Vframe
@@ -1827,25 +1892,23 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
      */
     mountView(viewPath, viewInitParams /*,keepPreHTML*/) {
         let me = this;
-        let { id, pId } = me;
+        let id = me.id;
         let node = G_GetById(id),
-            po, sign, view, params , ctors  , parentVf;
+            pId =  me.pId, po, sign, view, params , ctors  , parentVf;
         if (!me['$h'] && node) { //alter
             me['$h'] = 1;
             me['$i'] = node.innerHTML; //.replace(ScriptsReg, ''); template
         }
         me.unmountView(/*keepPreHTML*/);
         me['$b'] = 0; //destroyed 详见unmountView
-        po = G_ParseUri(viewPath);
+        po = G_ParseUri(viewPath || G_EMPTY);
         view = po[G_PATH];
         if (node && view) {
             me[G_PATH] = viewPath;
             params = po[G_PARAMS];
             
-            
-            parentVf = Vframe_TranslateQuery(pId, viewPath, params);
+            Vframe_TranslateQuery(pId, viewPath, params);
             me['$j'] = po[G_PATH];
-            
             
             G_Assign(params, viewInitParams);
             sign = me['$g'];
@@ -1857,7 +1920,8 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
                     
                     ctors = View_Prepare(TView);
                     
-                    view = new TView(id, me, params, ctors );
+                    
+                    view = new TView(id, me, params, node, ctors );
 
                     if (DEBUG) {
                         let viewProto = TView.prototype;
@@ -1891,7 +1955,11 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
                     View_DelegateEvents(view);
                     
                     
-                    params = G_ToTry(view.init, params, view);
+                    params = G_ToTry(view.init, [params, {
+                        node,
+                        
+                        deep: !view.tmpl
+                    }], view);
                     
                     
                     if (!params) params = { then: f => f() };
@@ -2054,7 +2122,7 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
         }
         for ([id, vf] of vfs) {
             if (DEBUG && document.querySelectorAll(`#${id}`).length > 1) {
-                Magix_Cfg.error(Error(`dom id:"${id}" duplicate`));
+                Magix_Cfg.error(Error(`mount vframe error. dom id:"${id}" duplicate`));
             }
             if (DEBUG) {
                 if (vfs[id]) {
@@ -2134,6 +2202,7 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
         }
         return vf;
     },
+    
     /**
      * 获取当前vframe的所有子vframe的id。返回数组中，vframe在数组中的位置并不固定
      * @return {Array[String]}
@@ -2299,7 +2368,6 @@ let Body_FindVframeInfo = (current, eventType) => {
         }
         match = {
             ...match,
-            
             r: info
         };
     }
@@ -2506,6 +2574,7 @@ let Body_DOMEventBind = (type, searchSelector, remove) => {
     
     
     
+    
     /*
 2017.8.1
     直接应用节点对比方案，需要解决以下问题
@@ -2535,6 +2604,7 @@ let Body_DOMEventBind = (type, searchSelector, remove) => {
 //https://github.com/DylanPiercey/set-dom/blob/master/src/index.js
 //https://github.com/patrick-steele-idem/morphdom
 let I_SVGNS = 'http://www.w3.org/2000/svg';
+let I_MATHNS = 'http://www.w3.org/1998/Math/MathML';
 let I_WrapMap = {
 
     // Support: IE <=9 only
@@ -2550,7 +2620,8 @@ let I_WrapMap = {
     area: [1, '<map>'],
     param: [1, '<object>'],
     g: [1, `<svg xmlns="${I_SVGNS}">`],
-    all: [0, '']
+    m: [1, `<math xmlns="${I_MATHNS}">`],
+    _: [0, '']
 };
 
 let I_RTagName = /<([a-z][^\/\0>\x20\t\r\n\f]+)/i;
@@ -2575,8 +2646,15 @@ let I_UnmountVframs = (vf, n) => {
 let I_GetNode = (html, node) => {
     let tmp = I_Doc.createElement('div');
     // Deserialize a standard representation
-    let tag = I_SVGNS == node.namespaceURI ? 'g' : (I_RTagName.exec(html) || [0, ''])[1].toLowerCase();
-    let wrap = I_WrapMap[tag] || I_WrapMap.all;
+    let ns = node.namespaceURI, tag;
+    if (ns == I_SVGNS) {
+        tag = 'g';
+    } else if (ns == I_MATHNS) {
+        tag = 'm';
+    } else {
+        tag = (I_RTagName.exec(html) || [0, ''])[1];
+    }
+    let wrap = I_WrapMap[tag] || I_WrapMap._;
     tmp.innerHTML = wrap[1] + html;
 
     // Descend through wrappers to the right content
@@ -2626,6 +2704,7 @@ let I_SetAttributes = (oldNode, newNode, ref, keepId) => {
         }
     }
 };
+
 let I_SpecialDiff = (oldNode, newNode) => {
     let nodeName = oldNode.nodeName, i;
     let specials = I_Specials[nodeName];
@@ -2667,8 +2746,7 @@ let I_SetChildNodes = (oldParent, newParent, ref, vframe, keys) => {
     let oldNode = oldParent.lastChild;
     let newNode = newParent.firstChild;
     let tempNew, tempOld, extra = 0,
-        nodeKey, foundNode, keyedNodes = {}, newKeyedNodes = {},
-        removed;
+        nodeKey, foundNode, keyedNodes = {}, newKeyedNodes = {}, next;
     // Extract keyed nodes from previous children and keep track of total count.
     while (oldNode) {
         extra++;
@@ -2689,12 +2767,12 @@ let I_SetChildNodes = (oldParent, newParent, ref, vframe, keys) => {
     while (newNode) {
         nodeKey = I_GetCompareKey(newNode);
         if (nodeKey) {
-            newKeyedNodes[nodeKey] = 1;
+            newKeyedNodes[nodeKey] = (newKeyedNodes[nodeKey] || 0) + 1;
         }
         newNode = newNode.nextSibling;
     }
     newNode = newParent.firstChild;
-    removed = newParent.childNodes.length < extra;
+    //removed = newParent.childNodes.length < extra;
     oldNode = oldParent.firstChild;
     while (newNode) {
         extra--;
@@ -2703,16 +2781,25 @@ let I_SetChildNodes = (oldParent, newParent, ref, vframe, keys) => {
         nodeKey = I_GetCompareKey(tempNew);
         foundNode = keyedNodes[nodeKey];
         if (foundNode && (foundNode = foundNode.pop())) {
-            if (foundNode != oldNode) {//如果找到的节点和当前不同，则移动
-                if (removed && oldNode.nextSibling == foundNode) {
-                    oldParent.appendChild(oldNode);
-                    oldNode = foundNode.nextSibling;
-                } else {
-                    oldParent.insertBefore(foundNode, oldNode);
-                }
-            } else {
-                oldNode = oldNode.nextSibling;
+            while (foundNode != oldNode) {
+                next = oldNode.nextSibling;
+                oldParent.appendChild(oldNode);
+                oldNode = next;
             }
+            oldNode = foundNode.nextSibling;
+            if (newKeyedNodes[nodeKey]) {
+                newKeyedNodes[nodeKey]--;
+            }
+            // if (foundNode != oldNode) {//如果找到的节点和当前不同，则移动
+            //     if (removed && oldNode.nextSibling == foundNode) {
+            //         oldParent.appendChild(oldNode);
+            //         oldNode = foundNode.nextSibling;
+            //     } else {
+            //         oldParent.insertBefore(foundNode, oldNode);
+            //     }
+            // } else {
+            //     oldNode = oldNode.nextSibling;
+            // }
             
             I_SetNode(foundNode, tempNew, oldParent, ref, vframe, keys);
             
@@ -2722,6 +2809,8 @@ let I_SetChildNodes = (oldParent, newParent, ref, vframe, keys) => {
             if (nodeKey && keyedNodes[nodeKey] && newKeyedNodes[nodeKey]) {
                 extra++;
                 ref.c = 1;
+                //ref.n.push([8, oldParent, tempNew, tempOld]);
+                //I_LazyId(ref, tempNew);
                 // If the old child had a key we skip over it until the end.
                 oldParent.insertBefore(tempNew, tempOld);
             } else {
@@ -2732,17 +2821,26 @@ let I_SetChildNodes = (oldParent, newParent, ref, vframe, keys) => {
                 
             }
         } else {
+            //I_LazyId(ref, tempNew);
             // Finally if there was no old node we add the new node.
-            oldParent.appendChild(tempNew);
+            //oldParent.appendChild(tempNew);
             ref.c = 1;
+            ref.n.push([1, oldParent, tempNew]);
         }
     }
 
     // If we have any remaining unkeyed nodes remove them from the end.
+    tempOld = oldParent.lastChild;
     while (extra-- > 0) {
-        tempOld = oldParent.lastChild;
         I_UnmountVframs(vframe, tempOld);
-        oldParent.removeChild(tempOld);
+        if (DEBUG) {
+            if (!tempOld.parentNode) {
+                console.error('Avoid remove node on view.destroy in digesting');
+            }
+        }
+        ref.n.push([2, oldParent, tempOld]);
+        tempOld = tempOld.previousSibling;
+        //oldParent.removeChild(tempOld);
         ref.c = 1;
     }
 };
@@ -2776,9 +2874,12 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys, hasMXV) => {
 
                 let newMxView = newNode.getAttribute(G_MX_VIEW),
                     newHTML = newNode.innerHTML;
+                
                 let newStaticAttrKey = newNode.getAttribute(G_Tag_Attr_Key);
-                let updateAttribute = !newStaticAttrKey ||
-                    newStaticAttrKey != oldNode.getAttribute(G_Tag_Attr_Key), updateChildren, unmountOld,
+                
+                let updateAttribute =
+                !newStaticAttrKey || newStaticAttrKey != oldNode.getAttribute(G_Tag_Attr_Key),
+                    updateChildren, unmountOld,
                     oldVf = Vframe_Vframes[oldNode.id],
                     assign,
                     view,
@@ -2799,16 +2900,18 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys, hasMXV) => {
                         //所以对组件，我们只检测参数与html，所以组件的hasMXV=0
                         hasMXV = 0;
                         params = assign.split(G_COMMA);
+                        
                         for (assign of params) {
                             //支持模板内使用this获取整个数据对象
                             //如果使用this来传递数据，我们把this的key处理成#号
                             //遇到#号则任意的数据改变都需要更新当前这个组件
-                            if (assign == G_HashKey || G_Has(keys, assign)) {
+                            if (assign == G_HashKey || G_Has(keys, assign) ) {
                                 paramsChanged = 1;
                                 break;
                             }
                         }
                     }
+                    //目前属性变化并不更新view,如果要更新，只需要再判断下updateAttribute即可
                     if (paramsChanged || htmlChanged || hasMXV) {
                         assign = view['$e'] && view['$f'];
                         if (assign) {
@@ -2822,12 +2925,13 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys, hasMXV) => {
                                 node: newNode,
                                 //html: newHTML,
                                 deep: !view.tmpl,
-                                mxv: hasMXV,
+                                attr: updateAttribute,
+                                //mxv: hasMXV,
                                 inner: htmlChanged,
                                 query: paramsChanged,
                                 keys
                             };
-                            updateAttribute = 1;
+                            //updateAttribute = 1;
                             /*if (updateAttribute) {
                                 updateAttribute = G_EMPTY;
                                 I_SetAttributes(oldNode, newNode, ref, 1);
@@ -2842,9 +2946,9 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys, hasMXV) => {
                             unmountOld = 1;
                             updateChildren = 1;
                         }
-                    } else {//view没发生变化，则只更新特别的几个属性
-                        updateAttribute = 1;
-                    }
+                    } //else {//view没发生变化，则只更新特别的几个属性
+                    //updateAttribute = 1;
+                    //}
                 } else {
                     updateChildren = 1;
                     unmountOld = oldVf;
@@ -2869,13 +2973,47 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys, hasMXV) => {
         } else {
             // we have to replace the node.
             I_UnmountVframs(vf, oldNode);
-            oldParent.replaceChild(newNode, oldNode);
+            //I_LazyId(ref, newNode);
+            //oldParent.replaceChild(newNode, oldNode);
             ref.c = 1;
+            ref.n.push([4, oldParent, newNode, oldNode]);
         }
     }
 };
     
-    
+    let Updater_EM = {
+    '&': 'amp',
+    '<': 'lt',
+    '>': 'gt',
+    '"': '#34',
+    '\'': '#39',
+    '\`': '#96'
+};
+let Updater_ER = /[&<>"'\`]/g;
+let Updater_Safeguard = v => '' + (v == null ? '' : v);
+let Updater_EncodeReplacer = m => `&${Updater_EM[m]};`;
+let Updater_Encode = v => Updater_Safeguard(v).replace(Updater_ER, Updater_EncodeReplacer);
+
+let Updater_Ref = ($$, v, k, f) => {
+    for (f = $$[G_SPLITER]; --f;)
+        if ($$[k = G_SPLITER + f] === v) return k;
+    $$[k = G_SPLITER + $$[G_SPLITER]++] = v;
+    return k;
+};
+let Updater_UM = {
+    '!': '%21',
+    '\'': '%27',
+    '(': '%28',
+    ')': '%29',
+    '*': '%2A'
+};
+let Updater_URIReplacer = m => Updater_UM[m];
+let Updater_URIReg = /[!')(*]/g;
+let Updater_EncodeURI = v => encodeURIComponent(Updater_Safeguard(v)).replace(Updater_URIReg, Updater_URIReplacer);
+
+let Updater_QR = /[\\'"]/g;
+let Updater_EncodeQ = v => Updater_Safeguard(v).replace(Updater_QR, '\\$&');
+
 
 let Updater_Digest = (updater, digesting) => {
     let keys = updater['$k'],
@@ -2883,7 +3021,7 @@ let Updater_Digest = (updater, digesting) => {
         selfId = updater['$b'],
         vf = Vframe_Vframes[selfId],
         view = vf && vf['$v'],
-        ref = { d: [], v: [] },
+        ref = { d: [], v: [], n: [] },
         node = G_GetById(selfId),
         tmpl, vdom, data = updater['$d'],
         refData = updater['$a'],
@@ -2910,12 +3048,12 @@ let Updater_Digest = (updater, digesting) => {
         view['$a'] > 0 &&
         (tmpl = view.tmpl) && view['$d'] == updater) {
         //修正通过id访问到不同的对象
+        
         view.fire('dompatch');
         delete Body_RangeEvents[selfId];
         delete Body_RangeVframes[selfId];
-        console.time('[updater time:' + selfId + ']');
         
-        vdom = I_GetNode(tmpl(data, selfId, refData), node);
+        vdom = I_GetNode(tmpl(data, selfId, refData, Updater_Encode, Updater_Safeguard, Updater_EncodeURI, Updater_Ref, Updater_EncodeQ), node);
         
         
         I_SetChildNodes(node, vdom, ref, vf, keys);
@@ -2923,13 +3061,30 @@ let Updater_Digest = (updater, digesting) => {
         for (vdom of ref.d) {
             vdom[0].id = vdom[1];
         }
+        for (vdom of ref.n) {
+            if (vdom[0] == 1) {
+                vdom[1].appendChild(vdom[2]);
+            } else if (vdom[0] == 2) {
+                vdom[1].removeChild(vdom[2]);
+            } else {
+                vdom[1].replaceChild(vdom[2], vdom[3]);
+            }
+        }
+        /*
+            在dom diff patch时，如果已渲染的vframe有变化，则会在vom tree上先派发created事件，同时传递inner标志，vom tree处理alter事件派发状态，未进入created事件派发状态
 
+            patch完成后，需要设置vframe hold fire created事件，因为带有assign方法的view在调用render后，vom tree处于就绪状态，此时会导致提前派发created事件，应该hold，统一在endUpdate中派发
+
+            有可能不需要endUpdate，所以hold fire要视情况而定
+        */
+        vf['$d'] = tmpl = ref.c || !view['$e'];
         for (vdom of ref.v) {
             vdom['$b']();
         }
-        if (ref.c || !view['$e']) {
+        if (tmpl) {
             view.endUpdate(selfId);
         }
+        
         
         if (ref.c) {
             
@@ -2940,7 +3095,6 @@ let Updater_Digest = (updater, digesting) => {
             
         }
         
-        console.timeEnd('[updater time:' + selfId + ']');
         redigest(1);
     } else {
         redigest();
@@ -3025,9 +3179,9 @@ G_Assign(Updater[G_PROTOTYPE], {
      *     console.log(this.updater.get('a'));
      * }
      */
-    set(obj) {
+    set(obj, unchanged) {
         let me = this;
-        me['$c'] = G_Set(obj, me['$d'], me['$k']) || me['$c'];
+        me['$c'] = G_Set(obj, me['$d'], me['$k'], unchanged) || me['$c'];
         return me;
     },
     /**
@@ -3040,8 +3194,8 @@ G_Assign(Updater[G_PROTOTYPE], {
      *     }).digest();
      * }
      */
-    digest(data, resolve) {
-        let me = this.set(data),
+    digest(data, unchanged, resolve) {
+        let me = this.set(data, unchanged),
             digesting = me['$e'];
         /*
             view:
@@ -3059,7 +3213,9 @@ G_Assign(Updater[G_PROTOTYPE], {
             如果在digest的过程中，多次调用自身的digest，则后续的进行排队。前面的执行完成后，排队中的一次执行完毕
         */
         
-        digesting.push(resolve);
+        if (resolve) {
+            digesting.push(resolve);
+        }
         if (!digesting.i) {
             Updater_Digest(me, digesting);
         } else if (DEBUG) {
@@ -3136,10 +3292,10 @@ G_Assign(Updater[G_PROTOTYPE], {
     parse(origin) {
         return G_ParseExpr(origin, this['$a']);
     }
+    
 });
     
-    
-    let View_EvtMethodReg = /^(\$?)([^<]*)<([^>]+)>$/;
+    let View_EvtMethodReg = /^(\$?)([^<]*)<([^>]+)>(?:&(.+))?$/;
 
 let processMixinsSameEvent = (exist, additional, temp) => {
     if (exist['a']) {
@@ -3201,15 +3357,19 @@ let View_WrapMethod = (prop, fName, short, fn, me) => {
     };
 };
 let View_DelegateEvents = (me, destroy) => {
-    let e, { '$eo': eo, '$so': so, '$el': el, id } = me; //eventsObject
-    for (e in eo) {
-        Body_DOMEventBind(e, so[e], destroy);
+    let e, { '$eo': eventsObject,
+        '$so': selectorObject,
+        '$el': eventsList, id } = me; //eventsObject
+    for (e in eventsObject) {
+        Body_DOMEventBind(e, selectorObject[
+            e], destroy);
     }
-    for (e of el) {
+    for (e of eventsList) {
         G_DOMEventLibBind(e.e, e.n, G_DOMGlobalProcessor, destroy, {
             i: id,
             v: me,
             f: e.f,
+            m: e.m,
             e: e.e
         });
     }
@@ -3261,12 +3421,19 @@ function extend(props, statics) {
     let ctors = [];
     if (ctor) ctors.push(ctor);
     
-    function NView(d, a, b , c , cs, z) {
-        me.call(z = this, d, a, b);
+    function NView(nodeId, ownerVf, initParams, node, mixinCtors , cs, z, params, concatCtors) {
+        me.call(z = this, nodeId, ownerVf, initParams, node, mixinCtors);
         cs = NView._;
-        if (cs) G_ToTry(cs, a, z);
         
-        G_ToTry(ctors.concat(c), b, z);
+        params = [initParams, {
+            node,
+            deep: !z.tmpl
+        }];
+        if (cs) G_ToTry(cs, params, z);
+        concatCtors = ctors.concat(mixinCtors);
+        if (concatCtors.length) {
+            G_ToTry(concatCtors, params, z);
+        }
         
     }
     NView.merge = merge;
@@ -3285,7 +3452,7 @@ let View_Prepare = oView => {
             currentFn, matches, selectorOrCallback, events, eventsObject = {},
             eventsList = [],
             selectorObject = {},
-            node, isSelector, p, item, mask;
+            node, isSelector, p, item, mask, mod, modifiers;
 
         
         matches = prop.mixins;
@@ -3297,7 +3464,14 @@ let View_Prepare = oView => {
             currentFn = prop[p];
             matches = p.match(View_EvtMethodReg);
             if (matches) {
-                [, isSelector, selectorOrCallback, events] = matches;
+                [, isSelector, selectorOrCallback, events, modifiers] = matches;
+                mod = {};
+                if (modifiers) {
+                    modifiers = modifiers.split(G_COMMA);
+                    for (item of modifiers) {
+                        mod[item] = true;
+                    }
+                }
                 events = events.split(G_COMMA);
                 for (item of events) {
                     node = View_Globals[selectorOrCallback];
@@ -3307,7 +3481,8 @@ let View_Prepare = oView => {
                             eventsList.push({
                                 f: currentFn,
                                 e: node,
-                                n: item
+                                n: item,
+                                m: mod
                             });
                             continue;
                         }
@@ -3410,7 +3585,7 @@ let View_IsObserveChanged = view => {
  */
 
 
-function View(id, owner, ops, me) {
+function View(id, owner, ops, node, me) {
     me = this;
     me.owner = owner;
     me.id = id;
@@ -3428,7 +3603,10 @@ function View(id, owner, ops, me) {
     
     
     id = View._;
-    if (id) G_ToTry(id, ops, me);
+    if (id) G_ToTry(id, [ops, {
+        node,
+        deep: !me.tmpl
+    }], me);
     
 }
 G_Assign(View, {
@@ -3574,6 +3752,7 @@ G_Assign(View[G_PROTOTYPE] , MEvent, {
             
         }
     },
+    
     /**
      * 包装异步回调
      * @param  {Function} fn 异步回调的function
@@ -3600,6 +3779,7 @@ G_Assign(View[G_PROTOTYPE] , MEvent, {
             }
         };
     },
+    
     
     /**
      * 监视地址栏中的参数或path，有变动时，才调用当前view的render方法。通常情况下location有变化不会引起当前view的render被调用，所以你需要指定地址栏中哪些参数有变化时才引起render调用，使得view只关注与自已需要刷新有关的参数
@@ -3821,8 +4001,10 @@ G_Assign(View[G_PROTOTYPE] , MEvent, {
 });
 Magix.View = View;
     
+    
     let G_Type = $.type;
-    let G_Now = $.now || Date.now;
+    
+    let G_Now = Date.now;
     /*
     一个请求send后，应该取消吗？
     参见xmlhttprequest的实现
@@ -4500,6 +4682,7 @@ Service.extend = (sync, cacheMax, cacheBuffer) => {
 Magix.Service = Service;
     
     
+    
 
 G_Assign(G_NOOP[G_PROTOTYPE], MEvent);
 
@@ -4538,7 +4721,6 @@ G_NOOP.extend = function extend(props, statics) {
 Magix.Base = G_NOOP;
 
     
-    
     coreDefaultView = View.extend();
     
 
@@ -4548,8 +4730,7 @@ Magix.Base = G_NOOP;
      * @param {Promise} [promise] 对应的promise对象
      */
     Magix.addView = (name, promiseObj) => {
-        let cfgViews = Magix_Cfg.views = Magix_Cfg.views || {};
-        cfgViews[name] = promiseObj;
+        mxViews[name] = promiseObj;
     };
     return Magix;
 })();

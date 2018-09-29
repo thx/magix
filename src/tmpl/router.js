@@ -195,6 +195,9 @@ let Router_PNR_Routers, Router_PNR_UnmatchView, /*Router_PNR_IsFun,*/
 /*#if(modules.urlRewriteRouter){#*/
 let Router_PNR_Rewrite;
 /*#}#*/
+/*#if(modules.dispatcherRecast){#*/
+let Router_PNR_Recast;
+/*#}#*/
 /*#if(modules.updateTitleRouter){#*/
 let DefaultTitle = G_DOCUMENT.title;
 /*#}#*/
@@ -213,6 +216,9 @@ let Router_AttachViewAndPath = (loc, view) => {
         //if (!G_IsFunction(Router_PNR_Rewrite)) {
         //    Router_PNR_Rewrite = G_NULL;
         //}
+        /*#}#*/
+        /*#if(modules.dispatcherRecast){#*/
+        Router_PNR_Recast = Magix_Cfg.recast;
         /*#}#*/
     }
     if (!loc[Router_VIEW]) {
@@ -305,9 +311,6 @@ let Router_Parse = href => {
             ...query[G_PARAMS]
             /*#if(!modules.forceEdgeRouter){#*/, ...hash[G_PARAMS]/*#}#*/
         };
-        if (DEBUG) {
-            params = Safeguard(params);
-        }
         result = {
             get: GetParam,
             href,
@@ -321,9 +324,10 @@ let Router_Parse = href => {
             Router_AttachViewAndPath(result);
             Router_HrefCache.set(href, result);
         }
-    }
-    if (DEBUG) {
-        result = Safeguard(result);
+        if (DEBUG) {
+            result.params = Safeguard(result.params);
+            result = Safeguard(result);
+        }
     }
     return result;
 };

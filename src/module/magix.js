@@ -1,10 +1,8 @@
 if (typeof DEBUG == 'undefined') window.DEBUG = true;
-let G_Type = (type) => o => Object.prototype.toString.call(o).slice(8, -1) == type;
-let G_IsObject = G_Type('Object');
-let G_IsArray = G_Type('Array');
-/*#if(modules.mxViewAttr){#*/
-let G_Trim = str => str.trim();
-/*#}#*/
+let G_Type = o => Object.prototype.toString.call(o).slice(8, -1);
+let G_IsType = type => o => G_Type(o) == type;
+let G_IsObject = G_IsType('Object');
+let G_IsArray = G_IsType('Array');
 Inc('../tmpl/variable');
 Inc('../tmpl/cache');
 /*#if(modules.defaultView){#*/
@@ -71,32 +69,32 @@ Inc('../tmpl/async');
 /*#}#*/
 Inc('../tmpl/vframe');
 Inc('../tmpl/body');
+/*#if(modules.viewChildren){#*/
+Inc('../tmpl/children');
+/*#}#*/
 /*#if(modules.updater){#*/
 /*#if(!modules.updaterVDOM&&!modules.updaterDOM){#*/
 Inc('../tmpl/tmpl');
 /*#}#*/
 /*#if(modules.updaterVDOM){#*/
-Inc('../tmpl/tovdom');
 /*#if(modules.updaterQuick){#*/
 Inc('../tmpl/quick');
 /*#}else{#*/
 Inc('../tmpl/tovdom');
 /*#}#*/
+Inc('../tmpl/vdom');
 /*#}else if(modules.updaterDOM){#*/
 Inc('../tmpl/dom');
 /*#}#*/
 Inc('../tmpl/updater');
 /*#}#*/
-/*#if(modules.viewSlot){#*/
-Inc('../tmpl/slot');
-/*#}#*/
 Inc('../tmpl/view');
 /*#if(modules.service){#*/
 let G_Now = Date.now;
 Inc('../tmpl/service');
+/*#if(modules.servicePush){#*/
+Inc('../tmpl/svsx');
+/*#}#*/
 /*#}#*/
 Inc('../tmpl/base');
-/*#if(!modules.mini){#*/
-Magix.fire = G_Trigger;
-/*#}#*/
 export default Magix;

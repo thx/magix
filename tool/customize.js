@@ -13,10 +13,13 @@ let modules = {
     updater: 1, //自动更新
     updaterDOM: 1, //dom增量更新
     updaterVDOM: 1,//v-dom增量更新
+    updaterQuick: 1,//quick
     updaterAsync: 1,//异步更新界面
+    updaterTouchAttr: 1,//当attr变化时是否更新view
 
     service: 1, //接口服务
     serviceCombine: 1, //接口combine
+    servicePush: 1,//接口对象主动推送数据
 
     router: 1, //路由模块
     tipRouter: 1, //切换页面时，如果开发者明确告诉magix数据有改变，则会提示用户
@@ -30,8 +33,9 @@ let modules = {
     cnum: 1, //Cache num
     ceach: 1, //Cache each
 
+    vframeHost: 1, //父子化同一个view中嵌套存在的vframe
+    layerVframe: 1,//
     collectView: 1, //收集同一个view中所有的子view并一次性发出请求，在请求combine时有用
-    layerVframe: 1, //父子化同一个view中嵌套存在的vframe
     viewProtoMixins: 1, //支持mixins
     //viewSlot: 1,//view支持slot
     share: 1, //向子或孙view公开数据
@@ -43,12 +47,11 @@ let modules = {
     resource: 1, //资源管理
     configIni: 1, //是否有ini配置文件
     nodeAttachVframe: 1, //节点上挂vframe对象
-    mxViewAttr: 1, //支持服务端直出
     viewMerge: 1, //view是否提供merge方法供扩展原型链对象
     keepHTML: 1, //保留html
-    eventEnterLeave: 1, //事件的enter与leave
     naked: 1,//原生实现
-    vdom: 1//虚拟dom
+    viewChildren: 1,//是否可以序列化子节点
+    dispatcherRecast: 1//渲染拦截
 };
 rs.map({
     '@{vframe#view.entity}': '$v',

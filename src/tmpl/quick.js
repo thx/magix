@@ -1,35 +1,4 @@
-let Q_EM = {
-    '&': 'amp',
-    '<': 'lt',
-    '>': 'gt',
-    '"': '#34',
-    '\'': '#39',
-    '\`': '#96'
-};
-let Q_ER = /[&<>"'\`]/g;
-let Q_Safeguard = v => '' + (v == null ? '' : v);
-let Q_EncodeReplacer = m => `&${Q_EM[m]};`;
-let Q_Encode = v => Q_Safeguard(v).replace(Q_ER, Q_EncodeReplacer);
 
-let Q_Ref = ($$, v, k, f) => {
-    for (f = $$[G_SPLITER]; --f;)
-        if ($$[k = G_SPLITER + f] === v) return k;
-    $$[k = G_SPLITER + $$[G_SPLITER]++] = v;
-    return k;
-};
-let Q_UM = {
-    '!': '%21',
-    '\'': '%27',
-    '(': '%28',
-    ')': '%29',
-    '*': '%2A'
-};
-let Q_URIReplacer = m => Q_UM[m];
-let Q_URIReg = /[!')(*]/g;
-let Q_EncodeURI = v => encodeURIComponent(Q_Safeguard(v)).replace(Q_URIReg, Q_URIReplacer);
-
-let Q_QR = /[\\'"]/g;
-let Q_EncodeQ = v => Q_Safeguard(v).replace(Q_QR, '\\$&');
 //let Q_VfToVNodes={};
 let Q_Create = (tag/*, views*/, children, props, unary) => {
     //html=tag+to_array(attrs)+children.html
@@ -41,9 +10,38 @@ let Q_Create = (tag/*, views*/, children, props, unary) => {
             prop, value, c,
             reused = {},
             outerHTML = '<' + tag,
+            attrs,
             innerHTML = G_EMPTY,
             newChildren = [],
             prevNode;
+        if (children) {
+            for (c of children) {
+                value = c['@{~v#node.outer.html}'];
+                if (c['@{~v#node.tag}'] == V_TEXT_NODE) {
+                    value = Updater_Encode(value);
+                }
+                innerHTML += value;
+                //merge text node
+                if (prevNode &&
+                    c['@{~v#node.tag}'] == V_TEXT_NODE &&
+                    prevNode['@{~v#node.tag}'] == V_TEXT_NODE) {
+                    //prevNode['@{~v#node.html}'] += c['@{~v#node.html}'];
+                    prevNode['@{~v#node.outer.html}'] += c['@{~v#node.outer.html}'];
+                } else {
+                    //reused node if new node key equal old node key
+                    if (c['@{~v#node.compare.key}']) {
+                        reused[c['@{~v#node.compare.key}']] = (reused[c['@{~v#node.compare.key}']] || 0) + 1;
+                    }
+                    //force diff children
+                    if (c['@{~v#node.has.mxv}'] ||
+                        V_SPECIAL_PROPS[c['@{~v#node.tag}']]) {
+                        hasMxv = 1;
+                    }
+                    prevNode = c;
+                    newChildren.push(c);
+                }
+            }
+        }
         for (prop in props) {
             value = props[prop];
             //布尔值
@@ -63,37 +61,13 @@ let Q_Create = (tag/*, views*/, children, props, unary) => {
                 hasMxv = 1;
             }
             props[prop] = value;
-            outerHTML += ` ${prop}="${value}"`;
+            outerHTML += ` ${prop}="${Updater_Encode(value)}"`;
         }
+        attrs = outerHTML;
         if (unary) {
             outerHTML += '/>';
         } else {
-            outerHTML += '>';
-            if (children) {
-                for (c of children) {
-                    innerHTML += c['@{~v#node.outer.html}'];
-                    //merge text node
-                    if (prevNode &&
-                        c['@{~v#node.tag}'] == V_TEXT_NODE &&
-                        prevNode['@{~v#node.tag}'] == V_TEXT_NODE) {
-                        //prevNode['@{~v#node.html}'] += c['@{~v#node.html}'];
-                        prevNode['@{~v#node.outer.html}'] += c['@{~v#node.outer.html}'];
-                    } else {
-                        //reused node if new node key equal old node key
-                        if (c['@{~v#node.compare.key}']) {
-                            reused[c['@{~v#node.compare.key}']] = 1;
-                        }
-                        //force diff children
-                        if (c['@{~v#node.has.mxv}'] ||
-                            V_SPECIAL_PROPS[c['@{~v#node.tag}']]) {
-                            hasMxv = 1;
-                        }
-                        prevNode = c;
-                        newChildren.push(c);
-                    }
-                }
-            }
-            outerHTML += innerHTML + `</${tag}>`;
+            outerHTML += `>${innerHTML}</${tag}>`;
         }
         // if (props[G_MX_VIEW]) {
         //     views.push(newChildren);
@@ -104,6 +78,7 @@ let Q_Create = (tag/*, views*/, children, props, unary) => {
             '@{~v#node.compare.key}': compareKey,
             '@{~v#node.tag}': tag,
             '@{~v#node.has.mxv}': hasMxv,
+            '@{~v#node.attrs}': attrs,
             '@{~v#node.attrs.map}': props,
             '@{~v#node.children}': newChildren,
             '@{~v#node.reused}': reused,

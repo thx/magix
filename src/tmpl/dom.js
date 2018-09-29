@@ -27,6 +27,7 @@
 //https://github.com/DylanPiercey/set-dom/blob/master/src/index.js
 //https://github.com/patrick-steele-idem/morphdom
 let I_SVGNS = 'http://www.w3.org/2000/svg';
+let I_MATHNS = 'http://www.w3.org/1998/Math/MathML';
 let I_WrapMap = {
 
     // Support: IE <=9 only
@@ -42,7 +43,8 @@ let I_WrapMap = {
     area: [1, '<map>'],
     param: [1, '<object>'],
     g: [1, `<svg xmlns="${I_SVGNS}">`],
-    all: [0, '']
+    m: [1, `<math xmlns="${I_MATHNS}">`],
+    _: [0, '']
 };
 
 let I_RTagName = /<([a-z][^\/\0>\x20\t\r\n\f]+)/i;
@@ -67,8 +69,15 @@ let I_UnmountVframs = (vf, n) => {
 let I_GetNode = (html, node) => {
     let tmp = I_Doc.createElement('div');
     // Deserialize a standard representation
-    let tag = I_SVGNS == node.namespaceURI ? 'g' : (I_RTagName.exec(html) || [0, ''])[1].toLowerCase();
-    let wrap = I_WrapMap[tag] || I_WrapMap.all;
+    let ns = node.namespaceURI, tag;
+    if (ns == I_SVGNS) {
+        tag = 'g';
+    } else if (ns == I_MATHNS) {
+        tag = 'm';
+    } else {
+        tag = (I_RTagName.exec(html) || [0, ''])[1];
+    }
+    let wrap = I_WrapMap[tag] || I_WrapMap._;
     tmp.innerHTML = wrap[1] + html;
 
     // Descend through wrappers to the right content
@@ -118,6 +127,27 @@ let I_SetAttributes = (oldNode, newNode, ref, keepId) => {
         }
     }
 };
+/*#if(modules.updaterTouchAttr){#*/
+let I_AttrDiff = (oldNode, newNode) => {
+    let oldAttributes = oldNode.attributes,
+        newAttributes = newNode.attributes,
+        diff = false, i = newAttributes.length, a, b, name;
+    if (oldAttributes.length == i) {
+        for (; i--;) {
+            a = newAttributes[i];
+            name = a.name;
+            b = oldAttributes[name];
+            if (!b || a[G_VALUE] != b[G_VALUE]) {
+                diff = true;
+                break;
+            }
+        }
+    } else {
+        diff = true;
+    }
+    return diff;
+};
+/*#}#*/
 let I_SpecialDiff = (oldNode, newNode) => {
     let nodeName = oldNode.nodeName, i;
     let specials = I_Specials[nodeName];
@@ -159,8 +189,7 @@ let I_SetChildNodes = (oldParent, newParent, ref, vframe, keys) => {
     let oldNode = oldParent.lastChild;
     let newNode = newParent.firstChild;
     let tempNew, tempOld, extra = 0,
-        nodeKey, foundNode, keyedNodes = {}, newKeyedNodes = {},
-        removed;
+        nodeKey, foundNode, keyedNodes = {}, newKeyedNodes = {}, next;
     // Extract keyed nodes from previous children and keep track of total count.
     while (oldNode) {
         extra++;
@@ -181,12 +210,12 @@ let I_SetChildNodes = (oldParent, newParent, ref, vframe, keys) => {
     while (newNode) {
         nodeKey = I_GetCompareKey(newNode);
         if (nodeKey) {
-            newKeyedNodes[nodeKey] = 1;
+            newKeyedNodes[nodeKey] = (newKeyedNodes[nodeKey] || 0) + 1;
         }
         newNode = newNode.nextSibling;
     }
     newNode = newParent.firstChild;
-    removed = newParent.childNodes.length < extra;
+    //removed = newParent.childNodes.length < extra;
     oldNode = oldParent.firstChild;
     while (newNode) {
         extra--;
@@ -195,16 +224,25 @@ let I_SetChildNodes = (oldParent, newParent, ref, vframe, keys) => {
         nodeKey = I_GetCompareKey(tempNew);
         foundNode = keyedNodes[nodeKey];
         if (foundNode && (foundNode = foundNode.pop())) {
-            if (foundNode != oldNode) {//如果找到的节点和当前不同，则移动
-                if (removed && oldNode.nextSibling == foundNode) {
-                    oldParent.appendChild(oldNode);
-                    oldNode = foundNode.nextSibling;
-                } else {
-                    oldParent.insertBefore(foundNode, oldNode);
-                }
-            } else {
-                oldNode = oldNode.nextSibling;
+            while (foundNode != oldNode) {
+                next = oldNode.nextSibling;
+                oldParent.appendChild(oldNode);
+                oldNode = next;
             }
+            oldNode = foundNode.nextSibling;
+            if (newKeyedNodes[nodeKey]) {
+                newKeyedNodes[nodeKey]--;
+            }
+            // if (foundNode != oldNode) {//如果找到的节点和当前不同，则移动
+            //     if (removed && oldNode.nextSibling == foundNode) {
+            //         oldParent.appendChild(oldNode);
+            //         oldNode = foundNode.nextSibling;
+            //     } else {
+            //         oldParent.insertBefore(foundNode, oldNode);
+            //     }
+            // } else {
+            //     oldNode = oldNode.nextSibling;
+            // }
             /*#if(modules.updaterAsync){#*/
             Async_AddTask(vframe, I_SetNode, foundNode, tempNew, oldParent, ref, vframe, keys);
             /*#}else{#*/
@@ -216,6 +254,8 @@ let I_SetChildNodes = (oldParent, newParent, ref, vframe, keys) => {
             if (nodeKey && keyedNodes[nodeKey] && newKeyedNodes[nodeKey]) {
                 extra++;
                 ref.c = 1;
+                //ref.n.push([8, oldParent, tempNew, tempOld]);
+                //I_LazyId(ref, tempNew);
                 // If the old child had a key we skip over it until the end.
                 oldParent.insertBefore(tempNew, tempOld);
             } else {
@@ -228,17 +268,26 @@ let I_SetChildNodes = (oldParent, newParent, ref, vframe, keys) => {
                 /*#}#*/
             }
         } else {
+            //I_LazyId(ref, tempNew);
             // Finally if there was no old node we add the new node.
-            oldParent.appendChild(tempNew);
+            //oldParent.appendChild(tempNew);
             ref.c = 1;
+            ref.n.push([1, oldParent, tempNew]);
         }
     }
 
     // If we have any remaining unkeyed nodes remove them from the end.
+    tempOld = oldParent.lastChild;
     while (extra-- > 0) {
-        tempOld = oldParent.lastChild;
         I_UnmountVframs(vframe, tempOld);
-        oldParent.removeChild(tempOld);
+        if (DEBUG) {
+            if (!tempOld.parentNode) {
+                console.error('Avoid remove node on view.destroy in digesting');
+            }
+        }
+        ref.n.push([2, oldParent, tempOld]);
+        tempOld = tempOld.previousSibling;
+        //oldParent.removeChild(tempOld);
         ref.c = 1;
     }
 };
@@ -272,9 +321,12 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys, hasMXV) => {
 
                 let newMxView = newNode.getAttribute(G_MX_VIEW),
                     newHTML = newNode.innerHTML;
+                /*#if(!modules.updaterTouchAttr){#*/
                 let newStaticAttrKey = newNode.getAttribute(G_Tag_Attr_Key);
-                let updateAttribute = !newStaticAttrKey ||
-                    newStaticAttrKey != oldNode.getAttribute(G_Tag_Attr_Key), updateChildren, unmountOld,
+                /*#}#*/
+                let updateAttribute =/*#if(modules.updaterTouchAttr){#*/ I_AttrDiff(oldNode, newNode)/*#}else{#*/
+                !newStaticAttrKey || newStaticAttrKey != oldNode.getAttribute(G_Tag_Attr_Key)/*#}#*/,
+                    updateChildren, unmountOld,
                     oldVf = Vframe_Vframes[oldNode.id],
                     assign,
                     view,
@@ -295,35 +347,42 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys, hasMXV) => {
                         //所以对组件，我们只检测参数与html，所以组件的hasMXV=0
                         hasMXV = 0;
                         params = assign.split(G_COMMA);
+                        /*#if(modules.vframeHost){#*/
+                        newStaticAttrKey = Updater_ChangedKeys[oldVf.hId || oldVf.pId];
+                        /*#}#*/
                         for (assign of params) {
                             //支持模板内使用this获取整个数据对象
                             //如果使用this来传递数据，我们把this的key处理成#号
                             //遇到#号则任意的数据改变都需要更新当前这个组件
-                            if (assign == G_HashKey || G_Has(keys, assign)) {
+                            if (assign == G_HashKey || G_Has(keys, assign) /*#if(modules.vframeHost){#*/ || G_Has(newStaticAttrKey, assign)/*#}#*/) {
                                 paramsChanged = 1;
                                 break;
                             }
                         }
                     }
-                    if (paramsChanged || htmlChanged || hasMXV) {
+                    //目前属性变化并不更新view,如果要更新，只需要再判断下updateAttribute即可
+                    if (paramsChanged || htmlChanged || hasMXV/*#if(modules.updaterTouchAttr){#*/ || updateAttribute/*#}#*/) {
                         assign = view['@{view#rendered}'] && view['@{view#assign.fn}'];
                         if (assign) {
                             params = uri[G_PARAMS];
                             //处理引用赋值
-                            Vframe_TranslateQuery(oldVf.pId, newMxView, params);
+                            /*#if(modules.viewChildren){#*/newStaticAttrKey = /*#}#*/Vframe_TranslateQuery(/*#if(modules.vframeHost){#*/oldVf.hId ||/*#}#*/oldVf.pId, newMxView, params);
                             oldVf['@{vframe#template}'] = newHTML;
                             //oldVf['@{vframe#data.stringify}'] = newDataStringify;
                             oldVf[G_PATH] = newMxView;//update ref
                             uri = {
-                                node: newNode,
+                                node: newNode,/*#if(modules.viewChildren){#*/
+                                map: Children_Wrap(newNode, newStaticAttrKey),
+                                /*#}#*/
                                 //html: newHTML,
                                 deep: !view.tmpl,
-                                mxv: hasMXV,
+                                attr: updateAttribute,
+                                //mxv: hasMXV,
                                 inner: htmlChanged,
                                 query: paramsChanged,
                                 keys
                             };
-                            updateAttribute = 1;
+                            //updateAttribute = 1;
                             /*if (updateAttribute) {
                                 updateAttribute = G_EMPTY;
                                 I_SetAttributes(oldNode, newNode, ref, 1);
@@ -338,9 +397,9 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys, hasMXV) => {
                             unmountOld = 1;
                             updateChildren = 1;
                         }
-                    } else {//view没发生变化，则只更新特别的几个属性
-                        updateAttribute = 1;
-                    }
+                    } //else {//view没发生变化，则只更新特别的几个属性
+                    //updateAttribute = 1;
+                    //}
                 } else {
                     updateChildren = 1;
                     unmountOld = oldVf;
@@ -365,8 +424,10 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys, hasMXV) => {
         } else {
             // we have to replace the node.
             I_UnmountVframs(vf, oldNode);
-            oldParent.replaceChild(newNode, oldNode);
+            //I_LazyId(ref, newNode);
+            //oldParent.replaceChild(newNode, oldNode);
             ref.c = 1;
+            ref.n.push([4, oldParent, newNode, oldNode]);
         }
     }
 };

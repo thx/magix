@@ -1,5 +1,37 @@
-/*#if(modules.updaterQuick){#*/
-//let Updater_VframesToVNodes = {};
+let Updater_EM = {
+    '&': 'amp',
+    '<': 'lt',
+    '>': 'gt',
+    '"': '#34',
+    '\'': '#39',
+    '\`': '#96'
+};
+let Updater_ER = /[&<>"'\`]/g;
+let Updater_Safeguard = v => '' + (v == null ? '' : v);
+let Updater_EncodeReplacer = m => `&${Updater_EM[m]};`;
+let Updater_Encode = v => Updater_Safeguard(v).replace(Updater_ER, Updater_EncodeReplacer);
+
+let Updater_Ref = ($$, v, k, f) => {
+    for (f = $$[G_SPLITER]; --f;)
+        if ($$[k = G_SPLITER + f] === v) return k;
+    $$[k = G_SPLITER + $$[G_SPLITER]++] = v;
+    return k;
+};
+let Updater_UM = {
+    '!': '%21',
+    '\'': '%27',
+    '(': '%28',
+    ')': '%29',
+    '*': '%2A'
+};
+let Updater_URIReplacer = m => Updater_UM[m];
+let Updater_URIReg = /[!')(*]/g;
+let Updater_EncodeURI = v => encodeURIComponent(Updater_Safeguard(v)).replace(Updater_URIReg, Updater_URIReplacer);
+
+let Updater_QR = /[\\'"]/g;
+let Updater_EncodeQ = v => Updater_Safeguard(v).replace(Updater_QR, '\\$&');
+/*#if(modules.vframeHost){#*/
+let Updater_ChangedKeys = {};
 /*#}#*/
 /*#if(!modules.updaterAsync){#*/
 let Updater_Digest = (updater, digesting) => {
@@ -8,7 +40,7 @@ let Updater_Digest = (updater, digesting) => {
         selfId = updater['@{updater#view.id}'],
         vf = Vframe_Vframes[selfId],
         view = vf && vf['@{vframe#view.entity}'],
-        ref = { d: [], v: [] },
+        ref = { d: [], v: [], n: [] },
         node = G_GetById(selfId),
         tmpl, vdom, data = updater['@{updater#data}'],
         refData = updater['@{updater#ref.data}'],
@@ -37,19 +69,21 @@ let Updater_Digest = (updater, digesting) => {
         view['@{view#sign}'] > 0 &&
         (tmpl = view.tmpl) && view['@{view#updater}'] == updater) {
         //修正通过id访问到不同的对象
+        /*#if(modules.vframeHost){#*/
+        Updater_ChangedKeys[selfId] = keys;
+        /*#}#*/
         view.fire('dompatch');
         delete Body_RangeEvents[selfId];
         delete Body_RangeVframes[selfId];
-        console.time('[updater time:' + selfId + ']');
         /*#if(modules.updaterVDOM){#*/
         /*#if(modules.updaterQuick){#*/
-        vdom = tmpl(data, refData, Q_Create, selfId, Q_Encode, Q_Safeguard, Q_EncodeURI, Q_Ref, Q_EncodeQ/*, vfsToVNodes*/);
+        vdom = tmpl(data, Q_Create, selfId, refData, Updater_Safeguard, Updater_EncodeURI, Updater_Ref, Updater_EncodeQ, G_IsArray, G_Assign/*, vfsToVNodes*/);
         //Updater_VframesToVNodes[selfId] = vfsToVNodes.reverse();
         /*#}else{#*/
-        vdom = TO_VDOM(tmpl(data, selfId, refData));
+        vdom = TO_VDOM(tmpl(data, selfId, refData, Updater_Encode, Updater_Safeguard, Updater_EncodeURI, Updater_Ref, Updater_EncodeQ));
         /*#}#*/
         /*#}else{#*/
-        vdom = I_GetNode(tmpl(data, selfId, refData), node);
+        vdom = I_GetNode(tmpl(data, selfId, refData, Updater_Encode, Updater_Safeguard, Updater_EncodeURI, Updater_Ref, Updater_EncodeQ), node);
         /*#}#*/
         /*#if(modules.updaterVDOM){#*/
         V_SetChildNodes(node, updater['@{updater#vdom}'], vdom, ref, vf, keys);
@@ -60,13 +94,32 @@ let Updater_Digest = (updater, digesting) => {
         for (vdom of ref.d) {
             vdom[0].id = vdom[1];
         }
+        for (vdom of ref.n) {
+            if (vdom[0] == 1) {
+                vdom[1].appendChild(vdom[2]);
+            } else if (vdom[0] == 2) {
+                vdom[1].removeChild(vdom[2]);
+            } else {
+                vdom[1].replaceChild(vdom[2], vdom[3]);
+            }
+        }
+        /*
+            在dom diff patch时，如果已渲染的vframe有变化，则会在vom tree上先派发created事件，同时传递inner标志，vom tree处理alter事件派发状态，未进入created事件派发状态
 
+            patch完成后，需要设置vframe hold fire created事件，因为带有assign方法的view在调用render后，vom tree处于就绪状态，此时会导致提前派发created事件，应该hold，统一在endUpdate中派发
+
+            有可能不需要endUpdate，所以hold fire要视情况而定
+        */
+        vf['@{vframe#hold.fire}'] = tmpl = ref.c || !view['@{view#rendered}'];
         for (vdom of ref.v) {
             vdom['@{view#render.short}']();
         }
-        if (ref.c || !view['@{view#rendered}']) {
+        if (tmpl) {
             view.endUpdate(selfId);
         }
+        /*#if(modules.vframeHost){#*/
+        delete Updater_ChangedKeys[selfId];
+        /*#}#*/
         /*#if(!modules.mini){#*/
         if (ref.c) {
             /*#if(modules.naked){#*/
@@ -85,7 +138,6 @@ let Updater_Digest = (updater, digesting) => {
             /*#}#*/
         }
         /*#}#*/
-        console.timeEnd('[updater time:' + selfId + ']');
         redigest(1);
     } else {
         redigest();
@@ -98,7 +150,7 @@ let Updater_Digest_Async = (updater, resolve) => {
         selfId = updater['@{updater#view.id}'],
         vf = Vframe_Vframes[selfId],
         view = vf && vf['@{vframe#view.entity}'],
-        ref = { d: [], v: [] },
+        ref = { d: [], v: [], n: [] },
         node = G_GetById(selfId),
         /*#if(modules.updaterQuick){#*/
         //vfsToVNodes = [],
@@ -115,48 +167,71 @@ let Updater_Digest_Async = (updater, resolve) => {
         delete Body_RangeVframes[selfId];
         Async_SetNewTask(vf, () => {
             console.log('ui ready', selfId);
-            for (vdom of ref.d) {
-                vdom[0].id = vdom[1];
-            }
-
-            for (vdom of ref.v) {
-                vdom['@{view#render.short}']();
-            }
-            if (ref.c || !view['@{view#rendered}']) {
-                view.endUpdate(selfId);
-            }
-            if (ref.c) {
-                /*#if(modules.naked){#*/
-                G_Trigger(G_DOCUMENT, 'htmlchanged', {
-                    vId: selfId
-                });
-                /*#}else if(modules.kissy){#*/
-                G_DOC.fire('htmlchanged', {
-                    vId: selfId
-                });
-                /*#}else{#*/
-                G_DOC.trigger({
-                    type: 'htmlchanged',
-                    vId: selfId
-                });
+            Async_SetNewTask(vf, () => {
+                console.log('complete', selfId);
+                vf['@{vframe#hold.fire}'] = tmpl = ref.c || !view['@{view#rendered}'];
+                if (tmpl) {
+                    view.endUpdate(selfId);
+                }
+                if (ref.c) {
+                    /*#if(modules.naked){#*/
+                    G_Trigger(G_DOCUMENT, 'htmlchanged', {
+                        vId: selfId
+                    });
+                    /*#}else if(modules.kissy){#*/
+                    G_DOC.fire('htmlchanged', {
+                        vId: selfId
+                    });
+                    /*#}else{#*/
+                    G_DOC.trigger({
+                        type: 'htmlchanged',
+                        vId: selfId
+                    });
+                    /*#}#*/
+                }
+                /*#if(!modules.mini){#*/
+                view.fire('domready');
                 /*#}#*/
+                if (resolve) resolve();
+            });
+            Async_AddTask(vf, () => {
+                for (vdom of ref.d) {
+                    vdom[0].id = vdom[1];
+                }
+            });
+            refData = vdom => {
+                if (vdom[0] == 1) {
+                    vdom[1].appendChild(vdom[2]);
+                } else if (vdom[0] == 2) {
+                    vdom[1].removeChild(vdom[2]);
+                } else {
+                    /*#if(modules.updaterVDOM){#*/
+                    V_CopyVNode(vdom[4], vdom[5], 1);
+                    /*#}#*/
+                    vdom[1].replaceChild(vdom[2], vdom[3]);
+                }
+            };
+            for (vdom of ref.n) {
+                Async_AddTask(vf, refData, vdom);
             }
-            /*#if(!modules.mini){#*/
-            view.fire('domready');
-            /*#}#*/
-            if (resolve) resolve();
+            refData = vdom => {
+                vdom['@{view#render.short}']();
+            };
+            for (vdom of ref.v) {
+                Async_AddTask(vf, refData, vdom);
+            }
+            Async_CheckStatus(selfId);
         });
         Async_AddTask(vf, () => {
-            console.time('[updater time:' + selfId + ']');
             /*#if(modules.updaterVDOM){#*/
             /*#if(modules.updaterQuick){#*/
-            vdom = tmpl(data, refData, Q_Create, selfId, Q_Encode, Q_Safeguard, Q_EncodeURI, Q_Ref, Q_EncodeQ/*, vfsToVNodes*/);
+            vdom = tmpl(data, Q_Create, selfId, refData, Updater_Encode, Updater_Safeguard, Updater_EncodeURI, Updater_Ref, Updater_EncodeQ, G_IsArray, G_Assign/*, vfsToVNodes*/);
             //Updater_VframesToVNodes[selfId] = vfsToVNodes.reverse();
             /*#}else{#*/
-            vdom = TO_VDOM(tmpl(data, selfId, refData));
+            vdom = TO_VDOM(tmpl(data, selfId, refData, Updater_Encode, Updater_Safeguard, Updater_EncodeURI, Updater_Ref, Updater_EncodeQ));
             /*#}#*/
             /*#}else{#*/
-            vdom = I_GetNode(tmpl(data, selfId, refData), node);
+            vdom = I_GetNode(tmpl(data, selfId, refData, Updater_Encode, Updater_Safeguard, Updater_EncodeURI, Updater_Ref, Updater_EncodeQ), node);
             /*#}#*/
             /*#if(modules.updaterVDOM){#*/
             V_SetChildNodes(node, updater['@{updater#vdom}'], vdom, ref, vf, keys);
@@ -164,7 +239,6 @@ let Updater_Digest_Async = (updater, resolve) => {
             /*#}else{#*/
             I_SetChildNodes(node, vdom, ref, vf, keys);
             /*#}#*/
-            console.timeEnd('[updater time:' + selfId + ']');
             Async_CheckStatus(selfId);
         });
     } else {
@@ -250,9 +324,9 @@ G_Assign(Updater[G_PROTOTYPE], {
      *     console.log(this.updater.get('a'));
      * }
      */
-    set(obj) {
+    set(obj, unchanged) {
         let me = this;
-        me['@{updater#data.changed}'] = G_Set(obj, me['@{updater#data}'], me['@{updater#keys}']) || me['@{updater#data.changed}'];
+        me['@{updater#data.changed}'] = G_Set(obj, me['@{updater#data}'], me['@{updater#keys}'], unchanged) || me['@{updater#data.changed}'];
         return me;
     },
     /**
@@ -265,8 +339,8 @@ G_Assign(Updater[G_PROTOTYPE], {
      *     }).digest();
      * }
      */
-    digest(data, resolve) {
-        let me = this.set(data)/*#if(!modules.updaterAsync){#*/,
+    digest(data, unchanged, resolve) {
+        let me = this.set(data, unchanged)/*#if(!modules.updaterAsync){#*/,
             digesting = me['@{updater#digesting.list}']/*#}#*/;
         /*
             view:
@@ -286,14 +360,16 @@ G_Assign(Updater[G_PROTOTYPE], {
         /*#if(modules.updaterAsync){#*/
         Updater_Digest_Async(me, resolve);
         /*#}else{#*/
-        digesting.push(resolve);
+        if (resolve) {
+            digesting.push(resolve);
+        }
         if (!digesting.i) {
             Updater_Digest(me, digesting);
         } else if (DEBUG) {
             console.warn('Avoid redigest while updater is digesting');
         }
         /*#}#*/
-    },
+    }/*#if(!modules.mini){#*/,
     /**
      * 获取当前数据状态的快照，配合altered方法可获得数据是否有变化
      * @return {Updater} 返回updater
@@ -363,4 +439,5 @@ G_Assign(Updater[G_PROTOTYPE], {
     parse(origin) {
         return G_ParseExpr(origin, this['@{updater#ref.data}']);
     }
+    /*#}#*/
 });

@@ -40,7 +40,7 @@ var tmpl = function (text, data) {
     //console.log(source);
     render = new Function('modules', '$throw', source);
   } catch (e) {
-    e.source = source;
+    //e.source = source;
     //console.log('xxxxxxxx',e);
     throw e;
   }

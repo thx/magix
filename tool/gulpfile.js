@@ -9,14 +9,15 @@ let pkg = require('../package.json');
 let ts = require('typescript');
 let customize = require('./customize');
 
-let type ='cmd,amd,kissy,webpack,module'; //打包kissy则type='kissy'
-let enableModules = 'style,viewInit,service,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,viewInitAsync';
+let type = 'cmd,amd,kissy,webpack,module'; //打包kissy则type='kissy'
+let enableModules = 'style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,viewInitAsync';
 
+//let mini='style,naked,updater,updaterVDOM,updaterQuick,mini'
 //let enableModules = 'style,viewInit,router,viewMerge,tipRouter,updater,autoEndUpdate,linkage,state,updaterDOM,viewProtoMixins';
 
 //let enableModules='';
 //mobile
-//let enableModules='defaultView,autoEndUpdate,linkage,base,style,viewInit,resource,nodeAttachVframe,updater,mxViewAttr,layerVframe,state';
+//let enableModules='defaultView,autoEndUpdate,linkage,base,style,viewInit,resource,nodeAttachVframe,updater,layerVframe,state';
 
 gulp.task('combine', () => {
     type.split(',').forEach(t => {
@@ -36,7 +37,7 @@ gulp.task('combine', () => {
             let c = fs.readFileSync('../dist/' + t + '/magix-es3-debug.js') + '';
             let str = ts.transpileModule(c, {
                 compilerOptions: {
-                    lib: ['ES7','ESNext','ES6'],
+                    lib: ['ES7', 'ESNext', 'ES6'],
                     target: 'es3',
                     module: ts.ModuleKind.None
                 }

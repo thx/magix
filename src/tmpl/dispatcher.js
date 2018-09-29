@@ -56,11 +56,20 @@ let Dispatcher_Update = (vframe, /*#if(modules.state){#*/ stateKeys, /*#}#*/ vie
  * @private
  */
 let Dispatcher_NotifyChange = (e, vf, view) => {
-    vf = Vframe_Root();
-    if ((view = e[Router_VIEW])) {
-        vf.mountView(view.to);
-    } else {
-        Dispatcher_UpdateTag = G_COUNTER++;
-        Dispatcher_Update(vf /*#if(modules.state){#*/, e.keys /*#}#*/);
+    /*#if(modules.dispatcherRecast){#*/
+    if (!Router_PNR_Recast || !Router_PNR_Recast(e)) {
+        /*#}#*/
+        vf = Vframe_Root();
+        /*#if(modules.router){#*/
+        if ((view = e[Router_VIEW])) {
+            vf.mountView(view.to);
+        } else {/*#}#*/
+            Dispatcher_UpdateTag = G_COUNTER++;
+            Dispatcher_Update(vf /*#if(modules.state){#*/, e.keys /*#}#*/);
+
+        /*#if(modules.router){#*/
+        }/*#}#*/
+        /*#if(modules.dispatcherRecast){#*/
     }
+    /*#}#*/
 };

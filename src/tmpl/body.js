@@ -70,9 +70,6 @@ let Body_FindVframeInfo = (current, eventType) => {
         }
         match = {
             ...match,
-            /*#if(modules.mxViewAttr){#*/
-            v: match.v || current.getAttribute('mx-owner'),
-            /*#}#*/
             r: info
         };
     }
@@ -105,6 +102,7 @@ let Body_FindVframeInfo = (current, eventType) => {
         }
         //if (selectorVfId != G_HashKey) { //从最近的vframe向上查找带有选择器事件的view
         /*#if(modules.layerVframe){#*/
+        //主要兼容服务端输出，不带id的情况
         let findParent = match && !match.v;
         /*#}#*/
         begin = current.id;

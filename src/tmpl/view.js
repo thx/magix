@@ -1,4 +1,4 @@
-let View_EvtMethodReg = /^(\$?)([^<]*)<([^>]+)>$/;
+let View_EvtMethodReg = /^(\$?)([^<]*)<([^>]+)>(?:&(.+))?$/;
 /*#if(modules.viewProtoMixins){#*/
 let processMixinsSameEvent = (exist, additional, temp) => {
     if (exist['@{~viewmixin#list}']) {
@@ -62,15 +62,19 @@ let View_WrapMethod = (prop, fName, short, fn, me) => {
     };
 };
 let View_DelegateEvents = (me, destroy) => {
-    let e, { '@{view#events.object}': eo, '@{view#selector.events.object}': so, '@{view#events.list}': el, id } = me; //eventsObject
-    for (e in eo) {
-        Body_DOMEventBind(e, so[e], destroy);
+    let e, { '@{view#events.object}': eventsObject,
+        '@{view#selector.events.object}': selectorObject,
+        '@{view#events.list}': eventsList, id } = me; //eventsObject
+    for (e in eventsObject) {
+        Body_DOMEventBind(e, selectorObject[
+            e], destroy);
     }
-    for (e of el) {
+    for (e of eventsList) {
         G_DOMEventLibBind(e.e, e.n, G_DOMGlobalProcessor, destroy, {
             i: id,
             v: me,
             f: e.f,
+            m: e.m,
             e: e.e
         });
     }
@@ -122,14 +126,32 @@ function extend(props, statics) {
     let ctors = [];
     if (ctor) ctors.push(ctor);
     /*#}#*/
-    function NView(d, a, b /*#if(modules.viewProtoMixins){#*/, c /*#}#*/, cs, z) {
-        me.call(z = this, d, a, b);
+    function NView(nodeId, ownerVf, initParams, node/*#if(modules.viewChildren&&modules.updaterQuick){#*/, vnode/*#}#*//*#if(modules.viewChildren){#*/, parentVf /*#}#*//*#if(modules.viewProtoMixins){#*/, mixinCtors /*#}#*/, cs, z, params/*#if(modules.viewProtoMixins){#*/, concatCtors/*#}#*/) {
+        me.call(z = this, nodeId, ownerVf, initParams, node/*#if(modules.viewChildren&&modules.updaterQuick){#*/, vnode/*#}#*//*#if(modules.viewChildren){#*/, parentVf/*#}#*//*#if(modules.viewProtoMixins){#*/, mixinCtors/*#}#*/);
         cs = NView._;
-        if (cs) G_ToTry(cs, a, z);
         /*#if(modules.viewProtoMixins){#*/
-        G_ToTry(ctors.concat(c), b, z);
+        params = [initParams, {
+            node,/*#if(modules.viewChildren&&modules.updaterQuick){#*/
+            vnode,
+            /*#}#*/
+            deep: !z.tmpl/*#if(modules.viewChildren){#*/,
+            map: Children_Wrap(/*#if(modules.updaterQuick){#*/vnode/*#}else{#*/node/*#}#*/, parentVf)/*#}#*/
+        }];
+        if (cs) G_ToTry(cs, params, z);
+        concatCtors = ctors.concat(mixinCtors);
+        if (concatCtors.length) {
+            G_ToTry(concatCtors, params, z);
+        }
         /*#}else{#*/
-        if (ctor) ctor.call(z, b);
+        params = {
+            node,/*#if(modules.viewChildren&&modules.updaterQuick){#*/
+            vnode,
+            /*#}#*/
+            deep: !z.tmpl/*#if(modules.viewChildren){#*/,
+            map: Children_Wrap(/*#if(modules.updaterQuick){#*/vnode/*#}else{#*/node/*#}#*/, parentVf)/*#}#*/
+        };
+        if (cs) G_ToTry(cs, [initParams, params], z);
+        if (ctor) ctor.call(z, initParams, params);
         /*#}#*/
     }
     NView.merge = merge;
@@ -148,7 +170,7 @@ let View_Prepare = oView => {
             currentFn, matches, selectorOrCallback, events, eventsObject = {},
             eventsList = [],
             selectorObject = {},
-            node, isSelector, p, item, mask;
+            node, isSelector, p, item, mask, mod, modifiers;
 
         /*#if(modules.viewProtoMixins){#*/
         matches = prop.mixins;
@@ -160,7 +182,14 @@ let View_Prepare = oView => {
             currentFn = prop[p];
             matches = p.match(View_EvtMethodReg);
             if (matches) {
-                [, isSelector, selectorOrCallback, events] = matches;
+                [, isSelector, selectorOrCallback, events, modifiers] = matches;
+                mod = {};
+                if (modifiers) {
+                    modifiers = modifiers.split(G_COMMA);
+                    for (item of modifiers) {
+                        mod[item] = true;
+                    }
+                }
                 events = events.split(G_COMMA);
                 for (item of events) {
                     node = View_Globals[selectorOrCallback];
@@ -170,7 +199,8 @@ let View_Prepare = oView => {
                             eventsList.push({
                                 f: currentFn,
                                 e: node,
-                                n: item
+                                n: item,
+                                m: mod
                             });
                             continue;
                         }
@@ -277,7 +307,7 @@ let View_IsObserveChanged = view => {
  */
 
 
-function View(id, owner, ops, me) {
+function View(id, owner, ops, node, me) {
     me = this;
     me.owner = owner;
     me.id = id;
@@ -295,7 +325,10 @@ function View(id, owner, ops, me) {
     /*#}#*/
     /*#if(modules.viewMerge){#*/
     id = View._;
-    if (id) G_ToTry(id, ops, me);
+    if (id) G_ToTry(id, [ops, {
+        node,
+        deep: !me.tmpl
+    }], me);
     /*#}#*/
 }
 G_Assign(View, {
@@ -447,6 +480,7 @@ G_Assign(View[G_PROTOTYPE] /*#if(!modules.mini){#*/, MEvent/*#}#*/, {
             /*#}#*/
         }
     },
+    /*#if(!modules.mini){#*/
     /**
      * 包装异步回调
      * @param  {Function} fn 异步回调的function
@@ -473,6 +507,7 @@ G_Assign(View[G_PROTOTYPE] /*#if(!modules.mini){#*/, MEvent/*#}#*/, {
             }
         };
     },
+    /*#}#*/
     /*#if(modules.router){#*/
     /**
      * 监视地址栏中的参数或path，有变动时，才调用当前view的render方法。通常情况下location有变化不会引起当前view的render被调用，所以你需要指定地址栏中哪些参数有变化时才引起render调用，使得view只关注与自已需要刷新有关的参数

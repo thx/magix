@@ -20,7 +20,7 @@ let returnTrue = () => true,
     returnFalse = () => false,
     eventMethods = {
         preventDefault: 'isDefaultPrevented',
-        stopImmediatePropagation: 'isImmediatePropagationStopped',
+        //stopImmediatePropagation: 'isImmediatePropagationStopped',
         stopPropagation: 'isPropagationStopped'
     };
 
@@ -51,12 +51,12 @@ let G_AddEvent = (element, type, data, fn) => {
         '@{~dom#type}': type,
         '@{~dom#event.proxy}'(e) {
             e = G_EventCompatible(e);
-            if (e.isImmediatePropagationStopped()) return;
+            //if (e.isImmediatePropagationStopped()) return;
             fn.call(element, e, data);
         }
     };
     collections.push(h);
-    element.addEventListener(type, h['@{~dom#event.proxy}'], false);
+    element.addEventListener(type, h['@{~dom#event.proxy}'], data && data.m);
 };
 let G_RemoveEvent = (element, type, data, cb) => {
     let id = G_MxId(element);
@@ -75,7 +75,7 @@ let G_RemoveEvent = (element, type, data, cb) => {
             }
         }
         if (found) {
-            element.removeEventListener(type, found['@{~dom#event.proxy}'], false);
+            element.removeEventListener(type, found['@{~dom#event.proxy}'], data && data.m);
         }
     }
 };
