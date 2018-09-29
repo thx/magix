@@ -288,7 +288,7 @@ let V_CopyVNode = (lastVDOM, newVDOM, withChildren, p) => {
     }
 };
 /*#}#*/
-let V_SetNode = (realNode, oldParent, lastVDOM, newVDOM, ref, vframe, keys, hasMXV) => {
+let V_SetNode = (realNode, oldParent, lastVDOM, newVDOM, ref, vframe, keys) => {
     if (DEBUG) {
         if (oldParent.nodeName == 'TEMPLATE') {
             console.error('unsupport template tag');
@@ -301,7 +301,7 @@ let V_SetNode = (realNode, oldParent, lastVDOM, newVDOM, ref, vframe, keys, hasM
     let lastAMap = lastVDOM['@{~v#node.attrs.map}'],
         newAMap = newVDOM['@{~v#node.attrs.map}'];
     if (V_SpecialDiff(realNode, lastVDOM, newVDOM) ||
-        (hasMXV = lastVDOM['@{~v#node.has.mxv}']) ||
+        lastVDOM['@{~v#node.has.mxv}'] ||
         lastVDOM['@{~v#node.outer.html}'] != newVDOM['@{~v#node.outer.html}']) {
         if (lastVDOM['@{~v#node.tag}'] == newVDOM['@{~v#node.tag}']) {
             if (lastVDOM['@{~v#node.tag}'] == V_TEXT_NODE) {
@@ -343,7 +343,6 @@ let V_SetNode = (realNode, oldParent, lastVDOM, newVDOM, ref, vframe, keys, hasM
                     paramsChanged = newMxView != oldVf[G_PATH];
                     assign = lastAMap[G_Tag_View_Key];
                     if (!htmlChanged && !paramsChanged && assign) {
-                        hasMXV = 0;
                         params = assign.split(G_COMMA);
                         /*#if(modules.vframeHost){#*/
                         lastAMap = Updater_ChangedKeys[oldVf.hId || oldVf.pId];
@@ -355,7 +354,7 @@ let V_SetNode = (realNode, oldParent, lastVDOM, newVDOM, ref, vframe, keys, hasM
                             }
                         }
                     }
-                    if (paramsChanged || htmlChanged || hasMXV /*#if(modules.updaterTouchAttr){#*/ || updateAttribute/*#}#*/) {
+                    if (paramsChanged || htmlChanged /*#if(modules.updaterTouchAttr){#*/ || updateAttribute/*#}#*/) {
                         assign = view['@{view#rendered}'] && view['@{view#assign.fn}'];
                         //如果有assign方法,且有参数或html变化
                         if (assign) {
@@ -415,7 +414,9 @@ let V_SetNode = (realNode, oldParent, lastVDOM, newVDOM, ref, vframe, keys, hasM
                     //ref.c = 1;
                     V_SetChildNodes(realNode, lastVDOM, newVDOM, ref, vframe, keys);
                 } else {
+                    /*#if(modules.updaterAsync){#*/
                     V_CopyVNode(lastVDOM, newVDOM);
+                    /*#}#*/
                 }
             }
         } else {
