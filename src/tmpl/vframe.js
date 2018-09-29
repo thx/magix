@@ -280,7 +280,7 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
                                     (key != 'owner' || value !== 0))) {
                                 throw new Error(`avoid write ${key} at file ${viewPath}!`);
                             }
-                        });
+                        }, true);
                     }
                     me['@{vframe#view.entity}'] = view;
                     /*#if(modules.router||modules.state){#*/
