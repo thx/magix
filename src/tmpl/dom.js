@@ -254,10 +254,10 @@ let I_SetChildNodes = (oldParent, newParent, ref, vframe, keys) => {
             if (nodeKey && keyedNodes[nodeKey] && newKeyedNodes[nodeKey]) {
                 extra++;
                 ref.c = 1;
-                //ref.n.push([8, oldParent, tempNew, tempOld]);
+                ref.n.push([8, oldParent, tempNew, tempOld]);
                 //I_LazyId(ref, tempNew);
                 // If the old child had a key we skip over it until the end.
-                oldParent.insertBefore(tempNew, tempOld);
+                //oldParent.insertBefore(tempNew, tempOld);
             } else {
                 oldNode = oldNode.nextSibling;
                 // Otherwise we diff the two non-keyed nodes.

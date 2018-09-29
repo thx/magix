@@ -99,8 +99,10 @@ let Updater_Digest = (updater, digesting) => {
                 vdom[1].appendChild(vdom[2]);
             } else if (vdom[0] == 2) {
                 vdom[1].removeChild(vdom[2]);
-            } else {
+            } else if (vdom[0] == 4) {
                 vdom[1].replaceChild(vdom[2], vdom[3]);
+            } else {
+                vdom[1].insertBefore(vdom[2], vdom[3]);
             }
         }
         /*

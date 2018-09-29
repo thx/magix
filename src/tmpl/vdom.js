@@ -22,7 +22,8 @@ let V_NSMap = {
 };
 let V_IgnoreKeys = {
     mxv: 1,
-    mxa: 1
+    mxa: 1,
+    mxs: 1
 };
 let V_SetAttributes = (oldNode, lastVDOM, newVDOM, ref) => {
     let key, value,

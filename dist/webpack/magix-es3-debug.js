@@ -2617,10 +2617,10 @@ module.exports = (function () {
                 if (nodeKey && keyedNodes[nodeKey] && newKeyedNodes[nodeKey]) {
                     extra++;
                     ref.c = 1;
-                    //ref.n.push([8, oldParent, tempNew, tempOld]);
+                    ref.n.push([8, oldParent, tempNew, tempOld]);
                     //I_LazyId(ref, tempNew);
                     // If the old child had a key we skip over it until the end.
-                    oldParent.insertBefore(tempNew, tempOld);
+                    //oldParent.insertBefore(tempNew, tempOld);
                 }
                 else {
                     oldNode = oldNode.nextSibling;
@@ -2651,7 +2651,7 @@ module.exports = (function () {
             ref.c = 1;
         }
     };
-    var I_SetNode = function (oldNode, newNode, oldParent, ref, vf, keys, hasMXV) {
+    var I_SetNode = function (oldNode, newNode, oldParent, ref, vf, keys) {
         //优先使用浏览器内置的方法进行判断
         /*
             特殊属性优先判断，先识别特殊属性是否发生了改变
@@ -2666,7 +2666,7 @@ module.exports = (function () {
             目前是显示abc
         */
         if (I_SpecialDiff(oldNode, newNode) ||
-            (oldNode.nodeType == 1 && (hasMXV = oldNode.hasAttribute(G_Tag_View_Key))) ||
+            (oldNode.nodeType == 1 && oldNode.hasAttribute(G_Tag_View_Key)) ||
             !(oldNode.isEqualNode && oldNode.isEqualNode(newNode))) {
             if (oldNode.nodeName === newNode.nodeName) {
                 // Handle regular element node updates.
@@ -2692,7 +2692,6 @@ module.exports = (function () {
                         if (!htmlChanged && !paramsChanged && assign) {
                             //对于mxv属性，带value的必定是组件
                             //所以对组件，我们只检测参数与html，所以组件的hasMXV=0
-                            hasMXV = 0;
                             params = assign.split(G_COMMA);
                             for (var _i = 0, params_1 = params; _i < params_1.length; _i++) {
                                 assign = params_1[_i];
@@ -2706,7 +2705,7 @@ module.exports = (function () {
                             }
                         }
                         //目前属性变化并不更新view,如果要更新，只需要再判断下updateAttribute即可
-                        if (paramsChanged || htmlChanged || hasMXV) {
+                        if (paramsChanged || htmlChanged) {
                             assign = view['$e'] && view['$f'];
                             if (assign) {
                                 params = uri[G_PARAMS];
@@ -2848,8 +2847,11 @@ module.exports = (function () {
                 else if (vdom[0] == 2) {
                     vdom[1].removeChild(vdom[2]);
                 }
-                else {
+                else if (vdom[0] == 4) {
                     vdom[1].replaceChild(vdom[2], vdom[3]);
+                }
+                else {
+                    vdom[1].insertBefore(vdom[2], vdom[3]);
                 }
             }
             /*
