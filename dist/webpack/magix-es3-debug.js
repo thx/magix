@@ -360,7 +360,7 @@ module.exports = (function () {
     var Safeguard = function (data) { return data; };
     if (DEBUG && window.Proxy) {
         var ProxiesPool_1 = new Map();
-        Safeguard = function (data, getter, setter) {
+        Safeguard = function (data, getter, setter, root) {
             if (G_IsPrimitive(data)) {
                 return data;
             }
@@ -392,7 +392,7 @@ module.exports = (function () {
                         if (!prefix && getter) {
                             getter(property);
                         }
-                        if (G_Has(target, property) &&
+                        if (!root && G_Has(target, property) &&
                             (G_IsArray(out) || G_IsObject(out))) {
                             return build(prefix + property + '.', out);
                         }
@@ -1811,7 +1811,7 @@ module.exports = (function () {
                                         (key != 'owner' || value !== 0))) {
                                     throw new Error("avoid write " + key + " at file " + viewPath + "!");
                                 }
-                            });
+                            }, true);
                         }
                         me['$v'] = view;
                         me['$a'] = Dispatcher_UpdateTag;

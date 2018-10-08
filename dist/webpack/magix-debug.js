@@ -381,7 +381,7 @@ let G_Extend = (ctor, base, props, statics, cProto) => {
     let Safeguard = data => data;
 if (DEBUG && window.Proxy) {
     let ProxiesPool = new Map();
-    Safeguard = (data, getter, setter) => {
+    Safeguard = (data, getter, setter, root) => {
         if (G_IsPrimitive(data)) {
             return data;
         }
@@ -413,7 +413,7 @@ if (DEBUG && window.Proxy) {
                     if (!prefix && getter) {
                         getter(property);
                     }
-                    if (G_Has(target, property) &&
+                    if (!root && G_Has(target, property) &&
                         (G_IsArray(out) || G_IsObject(out))) {
                         return build(prefix + property + '.', out);
                     }
@@ -1946,7 +1946,7 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
                                     (key != 'owner' || value !== 0))) {
                                 throw new Error(`avoid write ${key} at file ${viewPath}!`);
                             }
-                        });
+                        }, true);
                     }
                     me['$v'] = view;
                     
