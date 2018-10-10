@@ -10,10 +10,12 @@ if (DEBUG) {
 }
 let V_UnmountVframs = (vf, n) => {
     let id = IdIt(n);
-    if (vf['@{vframe#children}'][id]) {
-        vf.unmountVframe(id, 1);
-    } else {
-        vf.unmountZone(id, 1);
+    if (id) {
+        if (vf['@{vframe#children}'][id]) {
+            vf.unmountVframe(id, 1);
+        } else {
+            vf.unmountZone(id, 1);
+        }
     }
 };
 let V_NSMap = {

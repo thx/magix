@@ -982,11 +982,35 @@ declare interface Magix {
     parseUrl(url: string): Magix.RouterParseParts
 
     /**
-     * 把src对象的值添加到dest对象上
-     * @param dest 要mix的目标对象
-     * @param src mix的来源对象
+     * 把source对象的值添加到target对象上
+     * @param target 要mix的目标对象
+     * @param source mix的来源对象
      */
-    mix<TDest extends object, TSrc extends object>(dest: TDest, src: TSrc): TDest & TSrc
+    mix<T, U>(target: T, source: U): T & U;
+
+    /**
+     * 把source对象的值添加到target对象上
+     * @param target 要mix的目标对象
+     * @param source1 第一个mix的来源对象
+     * @param source2 第二个mix的来源对象
+     */
+    mix<T, U, V>(target: T, source1: U, source2: V): T & U & V;
+
+    /**
+     * 把source对象的值添加到target对象上
+     * @param target 要mix的目标对象
+     * @param source1 第一个mix的来源对象
+     * @param source2 第二个mix的来源对象
+     * @param source3 第三个mix的来源对象
+     */
+    mix<T, U, V, W>(target: T, source1: U, source2: V, source3: W): T & U & V & W;
+
+    /**
+     * 把source对象的值添加到target对象上
+     * @param target 要mix的目标对象
+     * @param sources 一个或多个mix的来源对象
+     */
+    mix(target: object, ...sources: any[]): any;
 
     /**
      * 检测某个对象是否拥有某个属性。

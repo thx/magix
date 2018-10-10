@@ -1,3 +1,6 @@
+## 3.8.13
+1. 获取元素`id`使用`getAttribute`方法，避免`from`元素带来的坑
+
 ## 3.8.12
 1. 调整`dom`更新时，`vframe`事件`created`的派发
 2. 清除`log`输出

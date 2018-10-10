@@ -60,10 +60,12 @@ I_Doc.head.appendChild(I_Base);
 
 let I_UnmountVframs = (vf, n) => {
     let id = IdIt(n);
-    if (vf['@{vframe#children}'][id]) {
-        vf.unmountVframe(id, 1);
-    } else {
-        vf.unmountZone(id, 1);
+    if (id) {
+        if (vf['@{vframe#children}'][id]) {
+            vf.unmountVframe(id, 1);
+        } else {
+            vf.unmountZone(id, 1);
+        }
     }
 };
 let I_GetNode = (html, node) => {
@@ -168,7 +170,7 @@ let I_GetCompareKey = (node, key) => {
         if (node['@{node#is.keyed}']) {
             key = node['@{node#reused.key}'];
         } else {
-            key = node['@{node#auto.id}'] ? G_EMPTY : node.id;
+            key = node['@{node#auto.id}'] ? G_EMPTY : node.getAttribute('id');
             if (!key) {
                 key = node.getAttribute(G_Tag_Key);
             }
@@ -327,14 +329,14 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys) => {
                 let updateAttribute =/*#if(modules.updaterTouchAttr){#*/ I_AttrDiff(oldNode, newNode)/*#}else{#*/
                 !newStaticAttrKey || newStaticAttrKey != oldNode.getAttribute(G_Tag_Attr_Key)/*#}#*/,
                     updateChildren, unmountOld,
-                    oldVf = Vframe_Vframes[oldNode.id],
+                    oldVf = Vframe_Vframes[oldNode.getAttribute('id')],
                     assign,
                     view,
                     uri = newMxView && G_ParseUri(newMxView),
                     params,
                     htmlChanged, paramsChanged;
                 if (newMxView && oldVf &&
-                    (!newNode.id || newNode.id == oldNode.id) &&
+                    (!newNode.getAttribute('id') || newNode.getAttribute('id') == oldNode.getAttribute('id')) &&
                     oldVf['@{vframe#view.path}'] == uri[G_PATH] &&
                     (view = oldVf['@{vframe#view.entity}'])) {
                     htmlChanged = newHTML != oldVf['@{vframe#template}'];
