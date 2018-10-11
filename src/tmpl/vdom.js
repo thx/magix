@@ -9,8 +9,8 @@ if (DEBUG) {
     V_TEXT_NODE = '#text';
 }
 let V_UnmountVframs = (vf, n) => {
-    let id = IdIt(n);
-    if (id) {
+    if (n.nodeType == 1) {
+        let id = IdIt(n);
         if (vf['@{vframe#children}'][id]) {
             vf.unmountVframe(id, 1);
         } else {

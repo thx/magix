@@ -1,7 +1,7 @@
 //#snippet;
 //#uncheck = jsThis,jsLoop;
 //#exclude = loader,allProcessor;
-/*!3.8.12 Licensed MIT*/
+/*!3.8.13 Licensed MIT*/
 /*
 author:kooboy_li@163.com
 loader:webpack
@@ -23,6 +23,8 @@ module.exports = (function () {
     var G_WINDOW = window;
     var G_Undefined = void G_COUNTER;
     var G_DOCUMENT = document;
+    var GA = G_DOCUMENT.documentElement.getAttribute;
+    var G_GetAttribute = function (node, attr) { return GA.call(node, attr); };
     var G_DOC = $(G_DOCUMENT);
     var Timeout = G_WINDOW.setTimeout;
     var G_CHANGED = 'changed';
@@ -130,7 +132,7 @@ module.exports = (function () {
             }
         }
     };
-    var IdIt = function (n) { return n.id || (n['$a'] = 1, n.id = G_Id()); };
+    var IdIt = function (n) { return G_GetAttribute(n, 'id') || (n['$a'] = 1, n.id = G_Id()); };
     var G_ToTry = function (fns, args, context, r, e) {
         args = args || G_EMPTY_ARRAY;
         if (!G_IsArray(fns))
@@ -1953,7 +1955,7 @@ module.exports = (function () {
                 if (!vf['$b']) { //防止嵌套的情况下深层的view被反复实例化
                     id = IdIt(vf);
                     vf['$b'] = 1;
-                    vfs.push([id, vf.getAttribute(G_MX_VIEW)]);
+                    vfs.push([id, G_GetAttribute(vf, G_MX_VIEW)]);
                 }
             }
             for (var _a = 0, vfs_1 = vfs; _a < vfs_1.length; _a++) {
@@ -2174,7 +2176,7 @@ module.exports = (function () {
     var Body_RangeVframes = {};
     var Body_Guid = 0;
     var Body_FindVframeInfo = function (current, eventType) {
-        var vf, tempId, selectorObject, eventSelector, eventInfos = [], begin = current, info = current.getAttribute("mx-" + eventType), match, view, vfs = [], selectorVfId = G_HashKey, backtrace = 0;
+        var vf, tempId, selectorObject, eventSelector, eventInfos = [], begin = current, info = G_GetAttribute(current, "mx-" + eventType), match, view, vfs = [], selectorVfId = G_HashKey, backtrace = 0;
         if (info) {
             match = Body_EvtInfoCache.get(info);
             if (!match) {
@@ -2445,12 +2447,14 @@ module.exports = (function () {
     I_Base.href = G_DOCUMENT.location.href;
     I_Doc.head.appendChild(I_Base);
     var I_UnmountVframs = function (vf, n) {
-        var id = IdIt(n);
-        if (vf['$c'][id]) {
-            vf.unmountVframe(id, 1);
-        }
-        else {
-            vf.unmountZone(id, 1);
+        if (n.nodeType == 1) {
+            var id = IdIt(n);
+            if (vf['$c'][id]) {
+                vf.unmountVframe(id, 1);
+            }
+            else {
+                vf.unmountZone(id, 1);
+            }
         }
     };
     var I_GetNode = function (html, node) {
@@ -2504,7 +2508,7 @@ module.exports = (function () {
             a = newAttributes[i];
             key = a.name;
             value = a[G_VALUE];
-            if (oldNode.getAttribute(key) != value) {
+            if (G_GetAttribute(oldNode, key) != value) {
                 if (key == 'id') {
                     ref.d.push([oldNode, value]);
                 }
@@ -2536,12 +2540,12 @@ module.exports = (function () {
                 key = node['$g'];
             }
             else {
-                key = node['$a'] ? G_EMPTY : node.id;
+                key = node['$a'] ? G_EMPTY : G_GetAttribute(node, 'id');
                 if (!key) {
-                    key = node.getAttribute(G_Tag_Key);
+                    key = G_GetAttribute(node, G_Tag_Key);
                 }
                 if (!key) {
-                    key = node.getAttribute(G_MX_VIEW);
+                    key = G_GetAttribute(node, G_MX_VIEW);
                     if (key) {
                         key = G_ParseUri(key)[G_PATH];
                     }
@@ -2671,22 +2675,22 @@ module.exports = (function () {
             if (oldNode.nodeName === newNode.nodeName) {
                 // Handle regular element node updates.
                 if (oldNode.nodeType === 1) {
-                    var staticKey = newNode.getAttribute(G_Tag_Key);
+                    var staticKey = G_GetAttribute(newNode, G_Tag_Key);
                     if (staticKey &&
-                        staticKey == oldNode.getAttribute(G_Tag_Key)) {
+                        staticKey == G_GetAttribute(oldNode, G_Tag_Key)) {
                         return;
                     }
                     // If we have the same nodename then we can directly update the attributes.
-                    var newMxView = newNode.getAttribute(G_MX_VIEW), newHTML = newNode.innerHTML;
-                    var newStaticAttrKey = newNode.getAttribute(G_Tag_Attr_Key);
-                    var updateAttribute = !newStaticAttrKey || newStaticAttrKey != oldNode.getAttribute(G_Tag_Attr_Key), updateChildren = void 0, unmountOld = void 0, oldVf = Vframe_Vframes[oldNode.id], assign = void 0, view = void 0, uri = newMxView && G_ParseUri(newMxView), params = void 0, htmlChanged = void 0, paramsChanged = void 0;
+                    var newMxView = G_GetAttribute(newNode, G_MX_VIEW), newHTML = newNode.innerHTML;
+                    var newStaticAttrKey = G_GetAttribute(newNode, G_Tag_Attr_Key);
+                    var updateAttribute = !newStaticAttrKey || newStaticAttrKey != G_GetAttribute(oldNode, G_Tag_Attr_Key), updateChildren = void 0, unmountOld = void 0, oldVf = Vframe_Vframes[G_GetAttribute(oldNode, 'id')], assign = void 0, view = void 0, uri = newMxView && G_ParseUri(newMxView), params = void 0, htmlChanged = void 0, paramsChanged = void 0;
                     if (newMxView && oldVf &&
-                        (!newNode.id || newNode.id == oldNode.id) &&
+                        (!G_GetAttribute(newNode, 'id') || G_GetAttribute(newNode, 'id') == G_GetAttribute(oldNode, 'id')) &&
                         oldVf['$j'] == uri[G_PATH] &&
                         (view = oldVf['$v'])) {
                         htmlChanged = newHTML != oldVf['$i'];
                         paramsChanged = newMxView != oldVf[G_PATH];
-                        assign = oldNode.getAttribute(G_Tag_View_Key);
+                        assign = G_GetAttribute(oldNode, G_Tag_View_Key);
                         //如果组件内html没改变，参数也没改变
                         //我们要检测引用参数是否发生了改变
                         if (!htmlChanged && !paramsChanged && assign) {

@@ -6,6 +6,8 @@ let G_NULL = null;
 let G_WINDOW = window;
 let G_Undefined = void G_COUNTER;
 let G_DOCUMENT = document;
+let GA = G_DOCUMENT.documentElement.getAttribute;
+let G_GetAttribute = (node, attr) => GA.call(node, attr);
 /*#if(!modules.naked){#*/
 let G_DOC = $(G_DOCUMENT);
 /*#}#*/
@@ -151,7 +153,7 @@ let View_ApplyStyle = (key, css) => {
     }
 };
 /*#}#*/
-let IdIt = n => n.nodeType == 1 ? (n.getAttribute('id') || (/*#if(!modules.updaterVDOM){#*/n['@{node#auto.id}'] = 1, /*#}#*/n.id = G_Id())) : G_EMPTY;
+let IdIt = n => G_GetAttribute(n, 'id') || (/*#if(!modules.updaterVDOM){#*/n['@{node#auto.id}'] = 1, /*#}#*/n.id = G_Id());
 let G_ToTry = (fns, args, context, r, e) => {
     args = args || G_EMPTY_ARRAY;
     if (!G_IsArray(fns)) fns = [fns];

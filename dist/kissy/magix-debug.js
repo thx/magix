@@ -1,7 +1,7 @@
 //#snippet;
 //#uncheck = jsThis,jsLoop;
 //#exclude = loader,allProcessor;
-/*!3.8.12 Licensed MIT*/
+/*!3.8.13 Licensed MIT*/
 /*
 author:kooboy_li@163.com
 loader:kissy
@@ -22,6 +22,8 @@ let G_NULL = null;
 let G_WINDOW = window;
 let G_Undefined = void G_COUNTER;
 let G_DOCUMENT = document;
+let GA = G_DOCUMENT.documentElement.getAttribute;
+let G_GetAttribute = (node, attr) => GA.call(node, attr);
 
 let G_DOC = $(G_DOCUMENT);
 
@@ -135,7 +137,7 @@ let View_ApplyStyle = (key, css) => {
     }
 };
 
-let IdIt = n => n.id || (n['$a'] = 1, n.id = G_Id());
+let IdIt = n => G_GetAttribute(n, 'id') || (n['$a'] = 1, n.id = G_Id());
 let G_ToTry = (fns, args, context, r, e) => {
     args = args || G_EMPTY_ARRAY;
     if (!G_IsArray(fns)) fns = [fns];
@@ -2057,7 +2059,7 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
                 id = IdIt(vf);
                 
                     vf['$b'] = 1;
-                    vfs.push([id, vf.getAttribute(G_MX_VIEW)]);
+                    vfs.push([id, G_GetAttribute(vf, G_MX_VIEW)]);
                     
             }
         }
@@ -2292,7 +2294,7 @@ let Body_Guid = 0;
 let Body_FindVframeInfo = (current, eventType) => {
     let vf, tempId, selectorObject, eventSelector, eventInfos = [],
         begin = current,
-        info = current.getAttribute(`mx-${eventType}`),
+        info = G_GetAttribute(current,`mx-${eventType}`),
         match, view, vfs = [],
         selectorVfId = G_HashKey,
         backtrace = 0;
@@ -2578,11 +2580,13 @@ I_Base.href = G_DOCUMENT.location.href;
 I_Doc.head.appendChild(I_Base);
 
 let I_UnmountVframs = (vf, n) => {
-    let id = IdIt(n);
-    if (vf['$c'][id]) {
-        vf.unmountVframe(id, 1);
-    } else {
-        vf.unmountZone(id, 1);
+    if (n.nodeType == 1) {
+        let id = IdIt(n);
+        if (vf['$c'][id]) {
+            vf.unmountVframe(id, 1);
+        } else {
+            vf.unmountZone(id, 1);
+        }
     }
 };
 let I_GetNode = (html, node) => {
@@ -2636,7 +2640,7 @@ let I_SetAttributes = (oldNode, newNode, ref, keepId) => {
         a = newAttributes[i];
         key = a.name;
         value = a[G_VALUE];
-        if (oldNode.getAttribute(key) != value) {
+        if (G_GetAttribute(oldNode, key) != value) {
             if (key == 'id') {
                 ref.d.push([oldNode, value]);
             } else {
@@ -2667,12 +2671,12 @@ let I_GetCompareKey = (node, key) => {
         if (node['$f']) {
             key = node['$g'];
         } else {
-            key = node['$a'] ? G_EMPTY : node.id;
+            key = node['$a'] ? G_EMPTY : G_GetAttribute(node, 'id');
             if (!key) {
-                key = node.getAttribute(G_Tag_Key);
+                key = G_GetAttribute(node, G_Tag_Key);
             }
             if (!key) {
-                key = node.getAttribute(G_MX_VIEW);
+                key = G_GetAttribute(node, G_MX_VIEW);
                 if (key) {
                     key = G_ParseUri(key)[G_PATH];
                 }
@@ -2807,34 +2811,33 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys) => {
         if (oldNode.nodeName === newNode.nodeName) {
             // Handle regular element node updates.
             if (oldNode.nodeType === 1) {
-                let staticKey = newNode.getAttribute(G_Tag_Key);
+                let staticKey = G_GetAttribute(newNode, G_Tag_Key);
                 if (staticKey &&
-                    staticKey == oldNode.getAttribute(G_Tag_Key)) {
+                    staticKey == G_GetAttribute(oldNode, G_Tag_Key)) {
                     return;
                 }
                 // If we have the same nodename then we can directly update the attributes.
 
-                let newMxView = newNode.getAttribute(G_MX_VIEW),
+                let newMxView = G_GetAttribute(newNode, G_MX_VIEW),
                     newHTML = newNode.innerHTML;
                 
-                let newStaticAttrKey = newNode.getAttribute(G_Tag_Attr_Key);
+                let newStaticAttrKey = G_GetAttribute(newNode, G_Tag_Attr_Key);
                 
-                let updateAttribute =
-                !newStaticAttrKey || newStaticAttrKey != oldNode.getAttribute(G_Tag_Attr_Key),
+                let updateAttribute =!newStaticAttrKey || newStaticAttrKey != G_GetAttribute(oldNode, G_Tag_Attr_Key),
                     updateChildren, unmountOld,
-                    oldVf = Vframe_Vframes[oldNode.id],
+                    oldVf = Vframe_Vframes[G_GetAttribute(oldNode, 'id')],
                     assign,
                     view,
                     uri = newMxView && G_ParseUri(newMxView),
                     params,
                     htmlChanged, paramsChanged;
                 if (newMxView && oldVf &&
-                    (!newNode.id || newNode.id == oldNode.id) &&
+                    (!G_GetAttribute(newNode, 'id') || G_GetAttribute(newNode, 'id') == G_GetAttribute(oldNode, 'id')) &&
                     oldVf['$j'] == uri[G_PATH] &&
                     (view = oldVf['$v'])) {
                     htmlChanged = newHTML != oldVf['$i'];
                     paramsChanged = newMxView != oldVf[G_PATH];
-                    assign = oldNode.getAttribute(G_Tag_View_Key);
+                    assign = G_GetAttribute(oldNode, G_Tag_View_Key);
                     //如果组件内html没改变，参数也没改变
                     //我们要检测引用参数是否发生了改变
                     if (!htmlChanged && !paramsChanged && assign) {

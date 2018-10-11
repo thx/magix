@@ -453,7 +453,7 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
         /*#if(modules.collectView){#*/
         let temp = [];
         for (vf of vframes) {
-            temp.push(vf.getAttribute(G_MX_VIEW));
+            temp.push(G_GetAttribute(vf, G_MX_VIEW));
         }
         G_Require(temp);
         /*#}#*/
@@ -468,7 +468,7 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
                 if (!G_Has(subs, id)) {
                     /*#}#*/
                     vf['@{node#mounted.vframe}'] = 1;
-                    vfs.push([id, vf.getAttribute(G_MX_VIEW)/*#if(modules.vframeHost){#*/, vf.getAttribute(G_Tag_View_Owner)/*#}#*/]);
+                    vfs.push([id, G_GetAttribute(vf, G_MX_VIEW)/*#if(modules.vframeHost){#*/, G_GetAttribute(vf, G_Tag_View_Owner)/*#}#*/]);
                     /*#if(modules.vframeHost){#*/
                 }
                 svfs = $(`${G_HashKey}${id} [${G_MX_VIEW}]`);

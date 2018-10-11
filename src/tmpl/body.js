@@ -53,7 +53,7 @@ let Body_Guid = 0;
 let Body_FindVframeInfo = (current, eventType) => {
     let vf, tempId, selectorObject, eventSelector, eventInfos = [],
         begin = current,
-        info = current.getAttribute(`mx-${eventType}`),
+        info = G_GetAttribute(current,`mx-${eventType}`),
         match, view, vfs = [],
         selectorVfId = G_HashKey,
         backtrace = 0;

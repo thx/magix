@@ -59,8 +59,8 @@ I_Base.href = G_DOCUMENT.location.href;
 I_Doc.head.appendChild(I_Base);
 
 let I_UnmountVframs = (vf, n) => {
-    let id = IdIt(n);
-    if (id) {
+    if (n.nodeType == 1) {
+        let id = IdIt(n);
         if (vf['@{vframe#children}'][id]) {
             vf.unmountVframe(id, 1);
         } else {
@@ -119,7 +119,7 @@ let I_SetAttributes = (oldNode, newNode, ref, keepId) => {
         a = newAttributes[i];
         key = a.name;
         value = a[G_VALUE];
-        if (oldNode.getAttribute(key) != value) {
+        if (G_GetAttribute(oldNode, key) != value) {
             if (key == 'id') {
                 ref.d.push([oldNode, value]);
             } else {
@@ -170,12 +170,12 @@ let I_GetCompareKey = (node, key) => {
         if (node['@{node#is.keyed}']) {
             key = node['@{node#reused.key}'];
         } else {
-            key = node['@{node#auto.id}'] ? G_EMPTY : node.getAttribute('id');
+            key = node['@{node#auto.id}'] ? G_EMPTY : G_GetAttribute(node, 'id');
             if (!key) {
-                key = node.getAttribute(G_Tag_Key);
+                key = G_GetAttribute(node, G_Tag_Key);
             }
             if (!key) {
-                key = node.getAttribute(G_MX_VIEW);
+                key = G_GetAttribute(node, G_MX_VIEW);
                 if (key) {
                     key = G_ParseUri(key)[G_PATH];
                 }
@@ -314,34 +314,33 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys) => {
         if (oldNode.nodeName === newNode.nodeName) {
             // Handle regular element node updates.
             if (oldNode.nodeType === 1) {
-                let staticKey = newNode.getAttribute(G_Tag_Key);
+                let staticKey = G_GetAttribute(newNode, G_Tag_Key);
                 if (staticKey &&
-                    staticKey == oldNode.getAttribute(G_Tag_Key)) {
+                    staticKey == G_GetAttribute(oldNode, G_Tag_Key)) {
                     return;
                 }
                 // If we have the same nodename then we can directly update the attributes.
 
-                let newMxView = newNode.getAttribute(G_MX_VIEW),
+                let newMxView = G_GetAttribute(newNode, G_MX_VIEW),
                     newHTML = newNode.innerHTML;
                 /*#if(!modules.updaterTouchAttr){#*/
-                let newStaticAttrKey = newNode.getAttribute(G_Tag_Attr_Key);
+                let newStaticAttrKey = G_GetAttribute(newNode, G_Tag_Attr_Key);
                 /*#}#*/
-                let updateAttribute =/*#if(modules.updaterTouchAttr){#*/ I_AttrDiff(oldNode, newNode)/*#}else{#*/
-                !newStaticAttrKey || newStaticAttrKey != oldNode.getAttribute(G_Tag_Attr_Key)/*#}#*/,
+                let updateAttribute =/*#if(modules.updaterTouchAttr){#*/ I_AttrDiff(oldNode, newNode)/*#}else{#*/!newStaticAttrKey || newStaticAttrKey != G_GetAttribute(oldNode, G_Tag_Attr_Key)/*#}#*/,
                     updateChildren, unmountOld,
-                    oldVf = Vframe_Vframes[oldNode.getAttribute('id')],
+                    oldVf = Vframe_Vframes[G_GetAttribute(oldNode, 'id')],
                     assign,
                     view,
                     uri = newMxView && G_ParseUri(newMxView),
                     params,
                     htmlChanged, paramsChanged;
                 if (newMxView && oldVf &&
-                    (!newNode.getAttribute('id') || newNode.getAttribute('id') == oldNode.getAttribute('id')) &&
+                    (!G_GetAttribute(newNode, 'id') || G_GetAttribute(newNode, 'id') == G_GetAttribute(oldNode, 'id')) &&
                     oldVf['@{vframe#view.path}'] == uri[G_PATH] &&
                     (view = oldVf['@{vframe#view.entity}'])) {
                     htmlChanged = newHTML != oldVf['@{vframe#template}'];
                     paramsChanged = newMxView != oldVf[G_PATH];
-                    assign = oldNode.getAttribute(G_Tag_View_Key);
+                    assign = G_GetAttribute(oldNode, G_Tag_View_Key);
                     //如果组件内html没改变，参数也没改变
                     //我们要检测引用参数是否发生了改变
                     if (!htmlChanged && !paramsChanged && assign) {
