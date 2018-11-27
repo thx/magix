@@ -242,6 +242,7 @@
           expect(hasGRequire).to.be.ok;
           expect(hasEndUpdate).to.be.ok;
           expect(hasView_DelegateEvents).to.be.ok;
+          expect(vf['$v']).to.equal(mockViewInstance);
           expect(vf['$h']).to.equal(0);
           expect(vf['$a']).to.equal(priVar['get-Dispatcher_UpdateTag']());
 
