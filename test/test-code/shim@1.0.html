@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>KISSY Magix 1.0 SHIM</title>
+</head>
+<body>
+  <div id="J_app_main"></div>
+  <div id="qunit"></div>
+  <div id="qunit-fixture"></div>
+  <script>
+  (function(win, S, Test) {
+    window.isMagix1 = 0;
+    window.isMagix3Shim = 1;
+    window.isMagix3 = 0;
+
+    S.config({
+      packages: [{
+        name: 'app',
+        base: '/test'
+      }]
+    });
+
+    describe('Magix test', () => {
+      before(done => {
+        iniMagix().then(() => {
+          if (!win.magixStarted) {
+            Magix.Vframe.on('mounted', () => {
+              win.magixStarted = true;
+              done();
+            });
+
+            Magix.Vframe.on('add', data => {
+              if (data.vframe.id === 'J_app_main') {
+                win.addFrameData = data;
+              }
+            })
+
+            Magix.boot({
+              rootId: 'J_app_main',
+              defaultView: 'app/view/default',
+              defaultPath: '/home',
+              routes: {
+                "/home": "app/view/default"
+              }
+            });
+
+            return;
+          } 
+          
+          done();
+        });
+      });
+
+      Test.Api();
+      Test.Event();
+      Test.Router();
+      Test.Vframe();
+    });
+  })(window, window.KISSY, window.Test || (window.Test = {}));
+  </script>
+</body>
+</html>

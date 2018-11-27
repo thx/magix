@@ -5,9 +5,9 @@
 /*
 author:kooboy_li@163.com
 loader:webpack
-enables:style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,viewInitAsync
+enables:style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,eventEnterLeave,kissy
 
-optionals:updaterVDOM,updaterQuick,updaterAsync,updaterTouchAttr,serviceCombine,servicePush,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,vframeHost,layerVframe,collectView,share,keepHTML,naked,viewChildren,dispatcherRecast
+optionals:updaterVDOM,updaterQuick,updaterAsync,updaterTouchAttr,serviceCombine,servicePush,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,vframeHost,layerVframe,collectView,share,viewInitAsync,keepHTML,naked,viewChildren,dispatcherRecast
 */
 module.exports = (function () {
     if (typeof DEBUG == 'undefined')
@@ -1818,24 +1818,17 @@ module.exports = (function () {
                         me['$v'] = view;
                         me['$a'] = Dispatcher_UpdateTag;
                         View_DelegateEvents(view);
-                        params = G_ToTry(view.init, [params, {
+                        G_ToTry(view.init, [params, {
                                 node: node,
                                 deep: !view.tmpl
                             }], view);
-                        if (!params)
-                            params = { then: function (f) { return f(); } };
-                        sign = ++me['$g'];
-                        params.then(function () {
-                            if (sign == me['$g']) {
-                                view['$b']();
-                                if (!view.tmpl) { //无模板
-                                    me['$h'] = 0; //不会修改节点，因此销毁时不还原
-                                    if (!view['$e']) {
-                                        view.endUpdate();
-                                    }
-                                }
+                        view['$b']();
+                        if (!view.tmpl) { //无模板
+                            me['$h'] = 0; //不会修改节点，因此销毁时不还原
+                            if (!view['$e']) {
+                                view.endUpdate();
                             }
-                        });
+                        }
                     }
                 });
             }
@@ -1930,6 +1923,7 @@ module.exports = (function () {
          * view.onwer.mountZone('zone');//即可完成zone节点下的view渲染
          */
         mountZone: function (zoneId, inner /*,keepPreHTML*/) {
+            var _a;
             var me = this;
             var vf, id, vfs = [];
             zoneId = zoneId || me.id;
@@ -1958,8 +1952,8 @@ module.exports = (function () {
                     vfs.push([id, G_GetAttribute(vf, G_MX_VIEW)]);
                 }
             }
-            for (var _a = 0, vfs_1 = vfs; _a < vfs_1.length; _a++) {
-                _b = vfs_1[_a], id = _b[0], vf = _b[1];
+            for (var _b = 0, vfs_1 = vfs; _b < vfs_1.length; _b++) {
+                _a = vfs_1[_b], id = _a[0], vf = _a[1];
                 if (DEBUG && document.querySelectorAll("#" + id).length > 1) {
                     Magix_Cfg.error(Error("mount vframe error. dom id:\"" + id + "\" duplicate"));
                 }
@@ -1979,7 +1973,6 @@ module.exports = (function () {
             if (!inner) {
                 Vframe_NotifyCreated(me);
             }
-            var _b;
         },
         /**
          * 销毁vframe
@@ -2874,8 +2867,7 @@ module.exports = (function () {
                 view.endUpdate(selfId);
             }
             if (ref.c) {
-                G_DOC.trigger({
-                    type: 'htmlchanged',
+                G_DOC.fire('htmlchanged', {
                     vId: selfId
                 });
             }
@@ -2895,6 +2887,7 @@ module.exports = (function () {
      * @param {String} viewId Magix.View对象Id
      */
     function Updater(viewId) {
+        var _a;
         var me = this;
         me['$b'] = viewId;
         me['$c'] = 1;
@@ -2906,7 +2899,6 @@ module.exports = (function () {
             _a);
         me['$e'] = [];
         me['$k'] = {};
-        var _a;
     }
     G_Assign(Updater[G_PROTOTYPE], {
         /**
@@ -3867,11 +3859,11 @@ module.exports = (function () {
          * @param {Object} [val] 属性值
          */
         set: function (key, val) {
+            var _a;
             if (!G_IsObject(key)) {
                 key = (_a = {}, _a[key] = val, _a);
             }
             G_Assign(this.$, key);
-            var _a;
         }
     });
     var Service_FetchFlags_ONE = 1;
