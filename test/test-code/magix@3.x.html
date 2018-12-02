@@ -30,7 +30,6 @@
           rootNode.id = 'J_app_main';
           document.body.append(rootNode);
           
-
           iniMagix().then(() => {
             if (!win.magixStarted) {
               Magix.Vframe.on('mounted', () => {
@@ -66,6 +65,7 @@
         });
 
         Test.Api();
+        Test.Private();
         Test.Event();
         Test.Router();
         Test.Vframe();

@@ -86,7 +86,9 @@ gulp.task('combine', () => {
           const { prFunArr, prVarArr } = getAllPrivateFunAndVar(tree);
           
           prFunArr.forEach((funName, index) => {
-            insertFunArr.push('\'set-' + funName + '\':function(fun){ var ori=' + funName + ';' + funName + '=fun; return ori;}' + (index === prFunArr.length - 1 ? '' : ',' ));
+            insertFunArr.push('\'set-' + funName + '\':function(fun){ var ori=' + funName + ';' + funName + '=fun; return ori;},' + 
+              '\'get-' + funName + '\':function(){ return ' + funName + ';}' + 
+              (index === prFunArr.length - 1 ? '' : ',' ));
           });
     
           insertFunArr.push('};\n');
@@ -95,7 +97,9 @@ gulp.task('combine', () => {
           const insertVarArr = [ '    Magix[\'$|_attrForTest_|$priVar$|_attrForTest_|$\']={' ];
     
           prVarArr.forEach((varName, index) => {
-            insertVarArr.push('\'get-' + varName + '\':function(){ return ' + varName + ';}' + (index === prVarArr.length - 1 ? '' : ',' ));
+            insertVarArr.push('\'get-' + varName + '\':function(){ return ' + varName + ';},' + 
+              '\'set-' + varName + '\':function(value){ ' + varName + ' = value;}' + 
+              (index === prVarArr.length - 1 ? '' : ',' ));
           });
     
           insertVarArr.push('};\n');
