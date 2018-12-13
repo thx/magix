@@ -1,5 +1,5 @@
 /**
- * @description https://lark.alipay.com/jintai.yzq/subway/magix1to3
+ * Magix.API 测试用例
  */
 (function(win, S, Test, EMPTY) {
   function Api() {

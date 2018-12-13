@@ -1,5 +1,5 @@
 /**
- * @description https://lark.alipay.com/jintai.yzq/subway/magix1to3
+ * Magix 内部私有方法测试用例
  */
 (function (win, S, Test, EMPTY) {
   let $;

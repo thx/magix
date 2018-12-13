@@ -1,5 +1,5 @@
 /**
- * @description https://lark.alipay.com/jintai.yzq/subway/magix1to3
+ * Magix.Vframe 相关测试用例
  */
 (function (win, S, Test, EMPTY) {
   let $;
@@ -9,7 +9,7 @@
   let TestView1;
   let TestView2
 
-  function Vframe() {
+  function VframeTest() {
     describe('Vframe', () => {
       before(done => {
         KISSY.use('app/view/content1, app/view/content2', (S, DView1, DView2) => {
@@ -170,7 +170,7 @@
           Vframe.off('add', onAdd);
         });
 
-        it('mountView unmountView invoke', () => {
+        it('mountView, unmountView, invoke', () => {
           const Vframe = Magix.Vframe;
           const vf = Vframe.get('vframe-container');
           let hasUnMountView = false;
@@ -356,7 +356,7 @@
           priFun['set-View_DelegateEvents'](oriUnView_DelegateEvents);
         });
 
-        it('mountVframe unmountVframe', () => {
+        it('mountVframe, unmountVframe', () => {
           // 测试mountVframe
           $('body').append('<div id="child-vframe-container">child vframe</div>');
           priVar['set-Vframe_Cache']([]);
@@ -467,7 +467,7 @@
           priFun['set-Vframe'](oriVfame);
         });
 
-        it('mountZone unmountZone', () => {
+        it('mountZone, unmountZone', () => {
           $('body').append(
             `<div id="zone-to-mount">
               <div id='vf1' mx-view='abc1'></div>
@@ -542,7 +542,7 @@
           vf.unmountVframe = oriUnmountVframe;
         });
 
-        it('parent children', () => {
+        it('parent, children', () => {
           $('body').append(
             `<div id="child1"></div><div id="child2"></div>`);
 
@@ -557,7 +557,7 @@
           expect(vf.children().sort()).to.deep.equal(['child1', 'child2'].sort());
         });
 
-        it('on fire off', () => {
+        it('on, fire, off', () => {
           const Vframe = Magix.Vframe;
           const vf = Vframe.get('vframe-container');
 
@@ -567,9 +567,9 @@
           expect(vf.on).to.equal(Magix.Event.on);
           expect(vf.fire).to.equal(Magix.Event.fire);
           expect(vf.fire).to.equal(Magix.Event.fire);
-        })
+        });
       }
     });
   }
-  Test.Vframe = Vframe;
+  Test.Vframe = VframeTest;
 })(window, window.KISSY, window.Test || (window.Test = {}), '');

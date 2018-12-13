@@ -1,5 +1,5 @@
 /**
- * @description https://lark.alipay.com/jintai.yzq/subway/magix1to3
+ * Magix.Router 相关测试用例
  */
 (function(win, S, Test, EMPTY) {
   const $ = S.all;
