@@ -2,10 +2,8 @@
  * Magix View相关方法测试用例
  */
 (function (win, S, Test, EMPTY) {
-  let $;
   const expect = chai.expect;
   let View;
-  let TestView;
   let priFun;
   let priVar;
 
