@@ -1,5 +1,5 @@
 /**
- * Magix View相关方法测试用例
+ * Magix Cache相关方法测试用例
  */
 (function (win, S, Test, EMPTY) {
   let $;
