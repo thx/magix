@@ -13,6 +13,7 @@ module.exports = function (config) {
       'dist/kissy/magix-es3-debug-test.js',
       'test/app/**/*.js',
       'test/test-code/*.js',
+      'test/test-code/private/*.js',
       'test/test-code/magix@3.x.html'
     ],
     preprocessors: {

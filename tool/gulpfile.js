@@ -26,9 +26,14 @@ enableModules = 'style,viewInit,service,router,resource,configIni,nodeAttachVfra
 
 function getAllPrivateFunAndVar(tree) {
   const expression = tree.program.body[0].expression;
-  const functionBody = expression.arguments[1].body;
+  const FunctionExpression = expression.arguments[1];
+  const functionBody = FunctionExpression.body;
   const prFunArr = [];
   const prVarArr = [];
+
+  FunctionExpression.params.forEach(param => {
+    prVarArr.push(param.name);
+  });
 
   functionBody.body.forEach(node => {
     if (node.type === 'FunctionDeclaration') {
