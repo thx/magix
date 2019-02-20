@@ -1,6 +1,5 @@
 let gulp = require('gulp');
-let uglifyES = require('gulp-uglify-es-scoped');
-let uglify = require('gulp-uglify');
+let uglifyES = require('gulp-terser-scoped');
 let fs = require('fs');
 let rename = require('gulp-rename');
 let header = require('gulp-header');
@@ -73,7 +72,7 @@ gulp.task('compress', () => {
             .pipe(rename('magix.js'))
             .pipe(gulp.dest('../dist/' + t + '/'));
         gulp.src('../dist/' + t + '/magix-es3-debug.js')
-            .pipe(uglify({
+            .pipe(uglifyES({
                 compress: {
                     expression: true,
                     keep_fargs: false,
