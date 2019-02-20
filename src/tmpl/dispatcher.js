@@ -4,7 +4,7 @@ let Dispatcher_UpdateTag = 0;
  * @param {Vframe} vframe vframe对象
  * @private
  */
-let Dispatcher_Update = (vframe, /*#if(modules.state){#*/ stateKeys, /*#}#*/ view, isChanged, cs, c) => {
+let Dispatcher_Update = (vframe, /*#if(modules.state){#*/ stateKeys, /*#}#*/ view, isChanged, cs, c, promise) => {
     if (vframe && vframe['@{vframe#update.tag}'] != Dispatcher_UpdateTag &&
         (view = vframe['@{vframe#view.entity}']) &&
         view['@{view#sign}'] > 1) { //存在view时才进行广播，对于加载中的可在加载完成后通过调用view.location拿到对应的G_WINDOW.location.href对象，对于销毁的也不需要广播
@@ -41,12 +41,17 @@ let Dispatcher_Update = (vframe, /*#if(modules.state){#*/ stateKeys, /*#}#*/ vie
                 }
             };*/
         if (isChanged) { //检测view所关注的相应的参数是否发生了变化
-            view['@{view#render.short}']();
+            promise = view['@{view#render.short}']();
         }
-        cs = vframe.children();
-        for (c of cs) {
-            Dispatcher_Update(Vframe_Vframes[c]/*#if(modules.state){#*/, stateKeys /*#}#*/);
+        if (!promise || !promise.then) {
+            promise = Vframe_Promise;
         }
+        promise.then(() => {
+            cs = vframe.children();
+            for (c of cs) {
+                Dispatcher_Update(Vframe_Vframes[c]/*#if(modules.state){#*/, stateKeys /*#}#*/);
+            }
+        });
     }
 };
 /**
@@ -67,7 +72,7 @@ let Dispatcher_NotifyChange = (e, vf, view) => {
             Dispatcher_UpdateTag = G_COUNTER++;
             Dispatcher_Update(vf /*#if(modules.state){#*/, e.keys /*#}#*/);
 
-        /*#if(modules.router){#*/
+            /*#if(modules.router){#*/
         }/*#}#*/
         /*#if(modules.dispatcherRecast){#*/
     }

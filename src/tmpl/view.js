@@ -54,9 +54,9 @@ let View_WrapMethod = (prop, fName, short, fn, me) => {
             View_DestroyAllResources(me);
             /*#}#*/
             /*#if(!modules.keepHTML){#*/
-            G_ToTry(fn, args, me);
+            return G_ToTry(fn, args, me);
             /*#}else{#*/
-            fn.apply(me, args);
+            return fn.apply(me, args);
             /*#}#*/
         }
     };

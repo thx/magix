@@ -1586,7 +1586,7 @@ Magix.Router = Router;
  * @param {Vframe} vframe vframe对象
  * @private
  */
-let Dispatcher_Update = (vframe,  stateKeys,  view, isChanged, cs, c) => {
+let Dispatcher_Update = (vframe,  stateKeys,  view, isChanged, cs, c, promise) => {
     if (vframe && vframe['$a'] != Dispatcher_UpdateTag &&
         (view = vframe['$v']) &&
         view['$a'] > 1) { //存在view时才进行广播，对于加载中的可在加载完成后通过调用view.location拿到对应的G_WINDOW.location.href对象，对于销毁的也不需要广播
@@ -1619,12 +1619,17 @@ let Dispatcher_Update = (vframe,  stateKeys,  view, isChanged, cs, c) => {
                 }
             };*/
         if (isChanged) { //检测view所关注的相应的参数是否发生了变化
-            view['$b']();
+            promise = view['$b']();
         }
-        cs = vframe.children();
-        for (c of cs) {
-            Dispatcher_Update(Vframe_Vframes[c], stateKeys );
+        if (!promise || !promise.then) {
+            promise = Vframe_Promise;
         }
+        promise.then(() => {
+            cs = vframe.children();
+            for (c of cs) {
+                Dispatcher_Update(Vframe_Vframes[c], stateKeys );
+            }
+        });
     }
 };
 /**
@@ -1643,7 +1648,7 @@ let Dispatcher_NotifyChange = (e, vf, view) => {
             Dispatcher_UpdateTag = G_COUNTER++;
             Dispatcher_Update(vf , e.keys );
 
-        
+            
         }
         
 };
@@ -1652,6 +1657,7 @@ let Dispatcher_NotifyChange = (e, vf, view) => {
     let Vframe_RootVframe;
 let Vframe_GlobalAlter;
 let Vframe_Vframes = {};
+let Vframe_Promise = { then: f => f() };
 let Vframe_NotifyCreated = vframe => {
     if (!vframe['$b'] && !vframe['$d'] && vframe['$cc'] == vframe['$rc']) { //childrenCount === readyCount
         if (!vframe['$cr']) { //childrenCreated
@@ -1939,7 +1945,7 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
                     }], view);
                     
                     
-                    if (!params) params = { then: f => f() };
+                    if (!params) params = Vframe_Promise;
                     sign = ++me['$g'];
                     params.then(() => {
                         if (sign == me['$g']) {
@@ -3021,6 +3027,7 @@ let Updater_Digest = (updater, digesting) => {
     updater['$k'] = {};
     if (changed &&
         view &&
+        node &&
         view['$a'] > 0 &&
         (tmpl = view.tmpl) && view['$d'] == updater) {
         //修正通过id访问到不同的对象

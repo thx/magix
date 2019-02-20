@@ -1,6 +1,7 @@
 let Vframe_RootVframe;
 let Vframe_GlobalAlter;
 let Vframe_Vframes = {};
+let Vframe_Promise = { then: f => f() };
 let Vframe_NotifyCreated = vframe => {
     if (!vframe['@{vframe#destroyed}'] && !vframe['@{vframe#hold.fire}'] && vframe['@{vframe#children.count}'] == vframe['@{vframe#children.ready.count}']) { //childrenCount === readyCount
         if (!vframe['@{vframe#children.created}']) { //childrenCreated
@@ -299,7 +300,7 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
                     }], view);
                     /*#}#*/
                     /*#if(modules.viewInitAsync){#*/
-                    if (!params) params = { then: f => f() };
+                    if (!params) params = Vframe_Promise;
                     sign = ++me['@{vframe#sign}'];
                     params.then(() => {
                         if (sign == me['@{vframe#sign}']) {

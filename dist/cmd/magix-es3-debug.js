@@ -1512,7 +1512,7 @@ define('magix', ['$'], function (require) {
      * @param {Vframe} vframe vframe对象
      * @private
      */
-    var Dispatcher_Update = function (vframe, stateKeys, view, isChanged, cs, c) {
+    var Dispatcher_Update = function (vframe, stateKeys, view, isChanged, cs, c, promise) {
         if (vframe && vframe['$a'] != Dispatcher_UpdateTag &&
             (view = vframe['$v']) &&
             view['$a'] > 1) { //存在view时才进行广播，对于加载中的可在加载完成后通过调用view.location拿到对应的G_WINDOW.location.href对象，对于销毁的也不需要广播
@@ -1543,13 +1543,18 @@ define('magix', ['$'], function (require) {
                     }
                 };*/
             if (isChanged) { //检测view所关注的相应的参数是否发生了变化
-                view['$b']();
+                promise = view['$b']();
             }
-            cs = vframe.children();
-            for (var _i = 0, cs_1 = cs; _i < cs_1.length; _i++) {
-                c = cs_1[_i];
-                Dispatcher_Update(Vframe_Vframes[c], stateKeys);
+            if (!promise || !promise.then) {
+                promise = Vframe_Promise;
             }
+            promise.then(function () {
+                cs = vframe.children();
+                for (var _i = 0, cs_1 = cs; _i < cs_1.length; _i++) {
+                    c = cs_1[_i];
+                    Dispatcher_Update(Vframe_Vframes[c], stateKeys);
+                }
+            });
         }
     };
     /**
@@ -1571,6 +1576,7 @@ define('magix', ['$'], function (require) {
     var Vframe_RootVframe;
     var Vframe_GlobalAlter;
     var Vframe_Vframes = {};
+    var Vframe_Promise = { then: function (f) { return f(); } };
     var Vframe_NotifyCreated = function (vframe) {
         if (!vframe['$b'] && !vframe['$d'] && vframe['$cc'] == vframe['$rc']) { //childrenCount === readyCount
             if (!vframe['$cr']) { //childrenCreated
@@ -1820,7 +1826,7 @@ define('magix', ['$'], function (require) {
                                 deep: !view.tmpl
                             }], view);
                         if (!params)
-                            params = { then: function (f) { return f(); } };
+                            params = Vframe_Promise;
                         sign = ++me['$g'];
                         params.then(function () {
                             if (sign == me['$g']) {
@@ -1927,6 +1933,7 @@ define('magix', ['$'], function (require) {
          * view.onwer.mountZone('zone');//即可完成zone节点下的view渲染
          */
         mountZone: function (zoneId, inner /*,keepPreHTML*/) {
+            var _a;
             var me = this;
             var vf, id, vfs = [];
             zoneId = zoneId || me.id;
@@ -1955,8 +1962,8 @@ define('magix', ['$'], function (require) {
                     vfs.push([id, G_GetAttribute(vf, G_MX_VIEW)]);
                 }
             }
-            for (var _a = 0, vfs_1 = vfs; _a < vfs_1.length; _a++) {
-                _b = vfs_1[_a], id = _b[0], vf = _b[1];
+            for (var _b = 0, vfs_1 = vfs; _b < vfs_1.length; _b++) {
+                _a = vfs_1[_b], id = _a[0], vf = _a[1];
                 if (DEBUG && document.querySelectorAll("#" + id).length > 1) {
                     Magix_Cfg.error(Error("mount vframe error. dom id:\"" + id + "\" duplicate"));
                 }
@@ -1976,7 +1983,6 @@ define('magix', ['$'], function (require) {
             if (!inner) {
                 Vframe_NotifyCreated(me);
             }
-            var _b;
         },
         /**
          * 销毁vframe
@@ -2828,6 +2834,7 @@ define('magix', ['$'], function (require) {
         updater['$k'] = {};
         if (changed &&
             view &&
+            node &&
             view['$a'] > 0 &&
             (tmpl = view.tmpl) && view['$d'] == updater) {
             //修正通过id访问到不同的对象
@@ -2892,6 +2899,7 @@ define('magix', ['$'], function (require) {
      * @param {String} viewId Magix.View对象Id
      */
     function Updater(viewId) {
+        var _a;
         var me = this;
         me['$b'] = viewId;
         me['$c'] = 1;
@@ -2903,7 +2911,6 @@ define('magix', ['$'], function (require) {
             _a);
         me['$e'] = [];
         me['$k'] = {};
-        var _a;
     }
     G_Assign(Updater[G_PROTOTYPE], {
         /**
@@ -3864,11 +3871,11 @@ define('magix', ['$'], function (require) {
          * @param {Object} [val] 属性值
          */
         set: function (key, val) {
+            var _a;
             if (!G_IsObject(key)) {
                 key = (_a = {}, _a[key] = val, _a);
             }
             G_Assign(this.$, key);
-            var _a;
         }
     });
     var Service_FetchFlags_ONE = 1;

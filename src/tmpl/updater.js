@@ -66,6 +66,7 @@ let Updater_Digest = (updater, digesting) => {
     updater['@{updater#keys}'] = {};
     if (changed &&
         view &&
+        node &&
         view['@{view#sign}'] > 0 &&
         (tmpl = view.tmpl) && view['@{view#updater}'] == updater) {
         //修正通过id访问到不同的对象
