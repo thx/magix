@@ -6,8 +6,8 @@
   "types": "types/magix.d.ts",
   "scripts": {
     "build": "cd ./tool && npx gulp combine",
-    "test:shim": "./node_modules/.bin/karma start karma.conf-magix3-shim ",
-    "test:3.0": "./node_modules/.bin/karma start karma.conf-magix3 "
+    "test:3.0": "./node_modules/.bin/karma start karma.conf-magix3 ",
+    "test:unit": "./node_modules/.bin/karma start karma.conf-unit "
   },
   "repository": {
     "type": "git",

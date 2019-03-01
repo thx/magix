@@ -7,16 +7,16 @@ module.exports = function (config) {
     files: [
       'https://g.alicdn.com/kissy/k/1.3.2/seed.js',
       'https://g.alicdn.com/kissy/k/1.3.2/sizzle.js',
-      'test/test-code/common.js',
       'node_modules/chai/chai.js',
       'node_modules/chai-dom/chai-dom.js',
-      'dist/kissy-shim/magix-es3-debug.js',
+      'dist/kissy/magix-es3-debug.js',
       'test/app/**/*.js',
-      'test/test-code/*.js',
-      'test/test-code/shim@1.0.html'
+      'test/unit/prepare.js',
+      'test/unit/specs/**/*.js',
+      'test/unit/index.js'
     ],
     preprocessors: {
-      'dist/kissy-shim/magix-es3-debug.js': ['coverage']
+      'dist/kissy/magix-es3-debug.js': ['coverage']
     },
     plugins: ['karma-mocha', 'karma-chai', 'karma-coverage', 'karma-spec-reporter', 'karma-chrome-launcher'],
     browsers: ['Chrome'],
