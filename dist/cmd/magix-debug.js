@@ -1,7 +1,7 @@
 //#snippet;
 //#uncheck = jsThis,jsLoop;
 //#exclude = loader,allProcessor;
-/*!3.8.13 Licensed MIT*/
+/*!3.8.14 Licensed MIT*/
 /*
 author:kooboy_li@163.com
 loader:cmd
@@ -2628,10 +2628,9 @@ I_Doc.head.appendChild(I_Base);
 let I_UnmountVframs = (vf, n) => {
     if (n.nodeType == 1) {
         let id = IdIt(n);
+        vf.unmountZone(id, 1);
         if (vf['$c'][id]) {
             vf.unmountVframe(id, 1);
-        } else {
-            vf.unmountZone(id, 1);
         }
     }
 };
@@ -3344,7 +3343,7 @@ let View_WrapMethod = (prop, fName, short, fn, me) => {
             View_DestroyAllResources(me);
             
             
-            G_ToTry(fn, args, me);
+            return G_ToTry(fn, args, me);
             
         }
     };

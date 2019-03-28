@@ -1,8 +1,7 @@
 /**
- * 本文件应存放在magix仓库中，并被install到项目的node_modules目录下。
- * 但是因magix.d.ts未在项目中检验，先在项目中使用，待稳定后再移入magix仓库中发版，避免频繁发布magix的版本
+ * magix3 namespace
  */
-declare namespace Magix {
+declare namespace Magix3 {
     /**
      * 配置信息接口
      */
@@ -196,12 +195,6 @@ declare namespace Magix {
          * @param origin 源字符串
          */
         parse(origin: string): object
-    }
-    /**
-     * magix虚拟dom接口
-     */
-    interface MagixVDOM {
-        [key: string]: any
     }
     /**
      * 数据载体接口
@@ -774,11 +767,11 @@ declare namespace Magix {
         release<TResourceType extends { destroy: () => void }>(key: string, destroy?: boolean): TResourceType
         /**
          * 离开确认方法，需要开发者实现离开的界面和逻辑
-         * @param msg 调用leaveTip时传递的离开消息
          * @param resolve 确定离开时调用该方法，通知magix离开
          * @param reject 留在当前界面时调用的方法，通知magix不要离开
+         * @param msg 调用leaveTip时传递的离开消息
          */
-        leaveConfirm(msg: string, resolve: Function, reject: Function): void
+        leaveConfirm(resolve: Function, reject: Function, msg: string): void
         /**
          * 离开提醒，比如表单有变化且未保存，我们可以提示用户是直接离开，还是保存后再离开
          * @param msg 离开提示消息
@@ -921,197 +914,197 @@ declare namespace Magix {
          */
         readonly prototype: ServicePrototype
     }
+    interface Magix {
+        /**
+         * 设置或获取配置信息
+         * @param cfg 配置信息参数对象
+         */
+        config<T extends object>(cfg: Magix3.Config & T): Magix3.Config & T
+
+        /**
+         * 获取配置信息
+         * @param key 配置key
+         */
+        config(key: string): any
+
+        /**
+         * 获取配置信息对象
+         */
+        config<T extends object>(): Magix3.Config & T
+
+        /**
+         * 应用初始化入口
+         * @param cfg 配置信息参数对象
+         */
+        boot(cfg: Magix3.Config): void
+        /**
+         * 把列表转化成hash对象。Magix.toMap([1,2,3,5,6]) => {1:1,2:1,3:1,4:1,5:1,6:1}。Magix.toMap([{id:20},{id:30},{id:40}],'id') => {20:{id:20},30:{id:30},40:{id:40}}
+         * @param list 源数组
+         * @param key 以数组中对象的哪个key的value做为hash的key
+         */
+        toMap<T extends object>(list: any[], key?: string): T
+        /**
+         * 以try catch方式执行方法，忽略掉任何异常。返回成功执行的最后一个方法的返回值
+         * @param fns 函数数组
+         * @param args 参数数组
+         * @param context 在待执行的方法内部，this的指向
+         */
+        toTry<TReturnType, TContextType>(fns: ((this: TContextType, ...args: any[]) => void) | ((this: TContextType, ...args: any[]) => void)[], args?: any[], context?: TContextType): TReturnType
+
+        /**
+         * 以try catch方式执行方法，忽略掉任何异常。返回成功执行的最后一个方法的返回值
+         * @param fns 函数数组
+         * @param args 参数数组
+         * @param context 在待执行的方法内部，this的指向
+         */
+        toTry<TReturnType>(fns: Function | Function[], args?: any[], context?: any): TReturnType
+
+        /**
+         * 转换成字符串路径。Magix.toUrl('/xxx/',{a:'b',c:'d'}) => /xxx/?a=b&c=d
+         * @param path 路径
+         * @param params 参数对象
+         * @param keo 保留空白值的对象
+         */
+        toUrl(path: string, params?: object, keo?: object): string
+        /**
+         * 把路径字符串转换成对象。Magix.parseUrl('/xxx/?a=b&c=d') => {path:'/xxx/',params:{a:'b',c:'d'}}
+         * @param url 路径字符串
+         */
+        parseUrl(url: string): Magix3.RouterParseParts
+
+        /**
+         * 把source对象的值添加到target对象上
+         * @param target 要mix的目标对象
+         * @param source mix的来源对象
+         */
+        mix<T, U>(target: T, source: U): T & U;
+
+        /**
+         * 把source对象的值添加到target对象上
+         * @param target 要mix的目标对象
+         * @param source1 第一个mix的来源对象
+         * @param source2 第二个mix的来源对象
+         */
+        mix<T, U, V>(target: T, source1: U, source2: V): T & U & V;
+
+        /**
+         * 把source对象的值添加到target对象上
+         * @param target 要mix的目标对象
+         * @param source1 第一个mix的来源对象
+         * @param source2 第二个mix的来源对象
+         * @param source3 第三个mix的来源对象
+         */
+        mix<T, U, V, W>(target: T, source1: U, source2: V, source3: W): T & U & V & W;
+
+        /**
+         * 把source对象的值添加到target对象上
+         * @param target 要mix的目标对象
+         * @param sources 一个或多个mix的来源对象
+         */
+        mix(target: object, ...sources: any[]): any;
+
+        /**
+         * 检测某个对象是否拥有某个属性。
+         * @param owner 检测对象
+         * @param prop 属性
+         */
+        has(owner: object, prop: string | number): boolean
+
+        /**
+         * 获取对象的keys
+         * @param src 源对象
+         */
+        keys(src: object): string[]
+
+        /**
+         * 判断一个节点是否在另外一个节点内，如果比较的2个节点是同一个节点，也返回true
+         * @param node 节点或节点id
+         * @param container 容器节点或节点id
+         */
+        inside(node: HTMLElement | string, container: HTMLElement | string): boolean
+
+        /**
+         * document.getElementById的简写
+         * @param id 节点id
+         */
+        node(id: string | HTMLElement): HTMLElement | null
+
+        /**
+         * 给节点添加id
+         * @param node 节点对象
+         */
+        nodeId(node: HTMLElement): string
+
+        /**
+         * 使用加载器的加载模块功能
+         * @param deps 模块id
+         * @param callback 回调
+         */
+        use(deps: string[], callback: (...args: object[]) => any): void
+
+        /**
+         * 保护对象不被修改
+         * @param o 保护对象
+         */
+        guard<T extends object>(o: T): T
+
+        /**
+         * 向页面追加样式
+         * @param key 样式对应的唯一key，该key主要防止向页面反复添加同样的样式
+         * @param cssText 样式字符串
+         */
+        applyStyle(key: string, cssText: string): void
+        /**
+         * 向页面追加样式
+         * @param atFile 以@开头的文件路径
+         */
+        applyStyle(atFile: string): void
+        /**
+         * 生成唯一的guid
+         * @param prefix guid的前缀，默认mx-
+         */
+        guid(prefix?: string): string
+        /**
+         * 接管管理类
+         */
+        Service: Magix3.Service
+
+        /**
+         * view类
+         */
+        View: Magix3.View
+        /**
+         * 缓存类
+         */
+        Cache: Magix3.Cache
+        /**
+         * 状态对象
+         */
+        State: Magix3.State
+        /**
+         * 事件对象
+         */
+        Event: Magix3.Event
+        /**
+         * 路由对象
+         */
+        Router: Magix3.Router
+        /**
+         * Vframe类，开发者绝对不需要继承、实例化该类！
+         */
+        Vframe: Magix3.Vframe
+
+        /**
+         * 拥有事件on,off,fire的基类
+         */
+        Base: Magix3.Base
+        default: Magix
+    }
 }
-
-declare interface Magix {
-    /**
-     * 设置或获取配置信息
-     * @param cfg 配置信息参数对象
-     */
-    config<T extends object>(cfg: Magix.Config & T): Magix.Config & T
-
-    /**
-     * 获取配置信息
-     * @param key 配置key
-     */
-    config(key: string): any
-
-    /**
-     * 获取配置信息对象
-     */
-    config<T extends object>(): Magix.Config & T
-
-    /**
-     * 应用初始化入口
-     * @param cfg 配置信息参数对象
-     */
-    boot(cfg: Magix.Config): void
-    /**
-     * 把列表转化成hash对象。Magix.toMap([1,2,3,5,6]) => {1:1,2:1,3:1,4:1,5:1,6:1}。Magix.toMap([{id:20},{id:30},{id:40}],'id') => {20:{id:20},30:{id:30},40:{id:40}}
-     * @param list 源数组
-     * @param key 以数组中对象的哪个key的value做为hash的key
-     */
-    toMap<T extends object>(list: any[], key?: string): T
-    /**
-     * 以try catch方式执行方法，忽略掉任何异常。返回成功执行的最后一个方法的返回值
-     * @param fns 函数数组
-     * @param args 参数数组
-     * @param context 在待执行的方法内部，this的指向
-     */
-    toTry<TReturnType, TContextType>(fns: ((this: TContextType, ...args: any[]) => void) | ((this: TContextType, ...args: any[]) => void)[], args?: any[], context?: TContextType): TReturnType
-
-    /**
-     * 以try catch方式执行方法，忽略掉任何异常。返回成功执行的最后一个方法的返回值
-     * @param fns 函数数组
-     * @param args 参数数组
-     * @param context 在待执行的方法内部，this的指向
-     */
-    toTry<TReturnType>(fns: Function | Function[], args?: any[], context?: any): TReturnType
-
-    /**
-     * 转换成字符串路径。Magix.toUrl('/xxx/',{a:'b',c:'d'}) => /xxx/?a=b&c=d
-     * @param path 路径
-     * @param params 参数对象
-     * @param keo 保留空白值的对象
-     */
-    toUrl(path: string, params?: object, keo?: object): string
-    /**
-     * 把路径字符串转换成对象。Magix.parseUrl('/xxx/?a=b&c=d') => {path:'/xxx/',params:{a:'b',c:'d'}}
-     * @param url 路径字符串
-     */
-    parseUrl(url: string): Magix.RouterParseParts
-
-    /**
-     * 把source对象的值添加到target对象上
-     * @param target 要mix的目标对象
-     * @param source mix的来源对象
-     */
-    mix<T, U>(target: T, source: U): T & U;
-
-    /**
-     * 把source对象的值添加到target对象上
-     * @param target 要mix的目标对象
-     * @param source1 第一个mix的来源对象
-     * @param source2 第二个mix的来源对象
-     */
-    mix<T, U, V>(target: T, source1: U, source2: V): T & U & V;
-
-    /**
-     * 把source对象的值添加到target对象上
-     * @param target 要mix的目标对象
-     * @param source1 第一个mix的来源对象
-     * @param source2 第二个mix的来源对象
-     * @param source3 第三个mix的来源对象
-     */
-    mix<T, U, V, W>(target: T, source1: U, source2: V, source3: W): T & U & V & W;
-
-    /**
-     * 把source对象的值添加到target对象上
-     * @param target 要mix的目标对象
-     * @param sources 一个或多个mix的来源对象
-     */
-    mix(target: object, ...sources: any[]): any;
-
-    /**
-     * 检测某个对象是否拥有某个属性。
-     * @param owner 检测对象
-     * @param prop 属性
-     */
-    has(owner: object, prop: string | number): boolean
-
-    /**
-     * 获取对象的keys
-     * @param src 源对象
-     */
-    keys(src: object): string[]
-
-    /**
-     * 判断一个节点是否在另外一个节点内，如果比较的2个节点是同一个节点，也返回true
-     * @param node 节点或节点id
-     * @param container 容器节点或节点id
-     */
-    inside(node: HTMLElement | string, container: HTMLElement | string): boolean
-
-    /**
-     * document.getElementById的简写
-     * @param id 节点id
-     */
-    node(id: string | HTMLElement): HTMLElement | null
-
-    /**
-     * 给节点添加id
-     * @param node 节点对象
-     */
-    nodeId(node: HTMLElement): string
-
-    /**
-     * 使用加载器的加载模块功能
-     * @param deps 模块id
-     * @param callback 回调
-     */
-    use(deps: string[], callback: (...args: object[]) => any): void
-
-    /**
-     * 保护对象不被修改
-     * @param o 保护对象
-     */
-    guard<T extends object>(o: T): T
-
-    /**
-     * 向页面追加样式
-     * @param key 样式对应的唯一key，该key主要防止向页面反复添加同样的样式
-     * @param cssText 样式字符串
-     */
-    applyStyle(key: string, cssText: string): void
-    /**
-     * 向页面追加样式
-     * @param atFile 以@开头的文件路径
-     */
-    applyStyle(atFile: string): void
-    /**
-     * 生成唯一的guid
-     * @param prefix guid的前缀，默认mx-
-     */
-    guid(prefix?: string): string
-    /**
-     * 接管管理类
-     */
-    Service: Magix.Service
-
-    /**
-     * view类
-     */
-    View: Magix.View
-    /**
-     * 缓存类
-     */
-    Cache: Magix.Cache
-    /**
-     * 状态对象
-     */
-    State: Magix.State
-    /**
-     * 事件对象
-     */
-    Event: Magix.Event
-    /**
-     * 路由对象
-     */
-    Router: Magix.Router
-    /**
-     * Vframe类，开发者绝对不需要继承、实例化该类！
-     */
-    Vframe: Magix.Vframe
-
-    /**
-     * 拥有事件on,off,fire的基类
-     */
-    Base: Magix.Base
-    default: Magix
-}
-
-declare const Magix: Magix
-
+/**
+ * export module
+ */
 declare module "magix" {
-    export = Magix
+    const Magix: Magix3.Magix
+    export = Magix;
 }

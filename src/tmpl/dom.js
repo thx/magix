@@ -61,10 +61,9 @@ I_Doc.head.appendChild(I_Base);
 let I_UnmountVframs = (vf, n) => {
     if (n.nodeType == 1) {
         let id = IdIt(n);
+        vf.unmountZone(id, 1);
         if (vf['@{vframe#children}'][id]) {
             vf.unmountVframe(id, 1);
-        } else {
-            vf.unmountZone(id, 1);
         }
     }
 };

@@ -1,7 +1,7 @@
 //#snippet;
 //#uncheck = jsThis,jsLoop;
 //#exclude = loader,allProcessor;
-/*!3.8.13 Licensed MIT*/
+/*!3.8.14 Licensed MIT*/
 /*
 author:kooboy_li@163.com
 loader:webpack
@@ -2455,11 +2455,9 @@ module.exports = (function () {
     var I_UnmountVframs = function (vf, n) {
         if (n.nodeType == 1) {
             var id = IdIt(n);
+            vf.unmountZone(id, 1);
             if (vf['$c'][id]) {
                 vf.unmountVframe(id, 1);
-            }
-            else {
-                vf.unmountZone(id, 1);
             }
         }
     };
@@ -3134,7 +3132,7 @@ module.exports = (function () {
                 me['$a']++;
                 me.fire('rendercall');
                 View_DestroyAllResources(me);
-                G_ToTry(fn, args, me);
+                return G_ToTry(fn, args, me);
             }
         };
     };
