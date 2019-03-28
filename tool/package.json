@@ -2,13 +2,20 @@
   "name": "magix-build",
   "version": "3.0.0",
   "private": true,
+  "scripts": {
+    "build": "gulp combine"
+  },
   "devDependencies": {
     "gulp": "^3.9.1",
     "gulp-rename": "^1.2.2",
-    "typescript": "^2.8.3"
+    "qunitjs": "^2.4.1",
+    "typescript": "^2.8.3",
+    "@babel/parser": "^7.1.3",
+    "@babel/generator": "^7.1.3"
   },
   "dependencies": {
     "gulp-header": "^2.0.5",
+    "gulp-terser-scoped": "^1.0.0",
     "gulp-uglify": "^3.0.0",
     "gulp-uglify-es": "^1.0.1",
     "gulp-uglify-es-scoped": "1.0.0"

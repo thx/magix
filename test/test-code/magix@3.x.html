@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>KISSY Magix 3.x</title>
+</head>
+<body>
+  <script>
+    (function(win, S, Test) {
+      const $ = S.all;
+
+      window.isMagix1 = 0;
+      window.isMagix3Shim = 0;
+      window.isMagix3 = 1;
+      window.DEBUG = false;
+
+      S.config({
+        packages: [{
+          name: 'app',
+          base: '/test'
+        }]
+      });
+
+      describe('Magix test', () => {
+        before(done => {
+          const rootNode = document.createElement('div');
+
+          rootNode.id = 'J_app_main';
+          document.body.append(rootNode);
+          
+          iniMagix().then(() => {
+            if (!win.magixStarted) {
+              Magix.Vframe.on('mounted', () => {
+                win.magixStarted = true;
+                done();
+              });
+
+              Magix.Vframe.on('add', data => {
+                if (data.vframe.id === 'J_app_main') {
+                  win.addFrameData = data;
+                }
+              })
+
+              Magix.boot({
+                rootId: 'J_app_main',
+                defaultView: 'app/view/default',
+                defaultPath: '/home',
+                routes: {
+                  "/home": "app/view/default"
+                },
+                ini: 'app/ini',
+                unmatchView: 'app/view/error',
+                error (e) {
+                  return 'error msg: ' + e;
+                }
+              });
+
+              return;
+            } 
+            
+            done();
+          });
+        });
+
+        Test.Api();
+        Test.Private();
+        Test.Cache();
+        Test.Event();
+        Test.State();
+        Test.Router();
+        Test.Bag();
+        Test.Updater();
+        Test.Vframe();
+        Test.View();
+        Test.Service();
+      });
+    })(window, window.KISSY, window.Test || (window.Test = {}));
+  </script>
+</body>
+</html>

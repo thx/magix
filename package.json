@@ -4,6 +4,11 @@
   "description": "view manager framewrok",
   "main": "dist/webpack/magix-debug.js",
   "types": "types/magix.d.ts",
+  "scripts": {
+    "build": "cd ./tool && npx gulp combine",
+    "test:shim": "./node_modules/.bin/karma start karma.conf-magix3-shim ",
+    "test:3.0": "./node_modules/.bin/karma start karma.conf-magix3 "
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/thx/magix.git"
@@ -24,5 +29,17 @@
   "bugs": {
     "url": "https://github.com/thx/magix/issues"
   },
-  "homepage": "https://github.com/thx/magix#readme"
+  "homepage": "https://github.com/thx/magix#readme",
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "chai-dom": "^1.7.0",
+    "chromedriver": "^2.35.0",
+    "karma": "^2.0.0",
+    "karma-chai": "^0.1.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-coverage": "^1.1.1",
+    "karma-mocha": "^1.3.0",
+    "karma-spec-reporter": "0.0.32",
+    "mocha": "^5.0.0"
+  }
 }

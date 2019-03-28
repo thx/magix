@@ -5,9 +5,9 @@
 /*
 author:kooboy_li@163.com
 loader:module
-enables:style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,viewInitAsync
+enables:style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,eventEnterLeave,kissy
 
-optionals:updaterVDOM,updaterQuick,updaterAsync,updaterTouchAttr,serviceCombine,servicePush,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,vframeHost,layerVframe,collectView,share,keepHTML,naked,viewChildren,dispatcherRecast
+optionals:updaterVDOM,updaterQuick,updaterAsync,updaterTouchAttr,serviceCombine,servicePush,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,vframeHost,layerVframe,collectView,share,viewInitAsync,keepHTML,naked,viewChildren,dispatcherRecast
 */
 if (typeof DEBUG == 'undefined') window.DEBUG = true;
 let G_Type = o => Object.prototype.toString.call(o).slice(8, -1);
@@ -2033,19 +2033,13 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
                     
                     View_DelegateEvents(view);
                     
-                    
-                    params = G_ToTry(view.init, [params, {
+                     G_ToTry(view.init, [params, {
                         node,
                         
                         deep: !view.tmpl
                     }], view);
                     
                     
-                    if (!params) params = Vframe_Promise;
-                    sign = ++me['$g'];
-                    params.then(() => {
-                        if (sign == me['$g']) {
-                            
                             view['$b']();
                             if (!view.tmpl) { //无模板
                                 me['$h'] = 0; //不会修改节点，因此销毁时不还原
@@ -2054,9 +2048,6 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
                                 }
                             }
                             
-                        }
-                    });
-                    
                 }
             });
         }

@@ -5,9 +5,9 @@
 /*
 author:kooboy_li@163.com
 loader:cmd
-enables:style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,viewInitAsync
+enables:style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,eventEnterLeave,kissy
 
-optionals:updaterVDOM,updaterQuick,updaterAsync,updaterTouchAttr,serviceCombine,servicePush,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,vframeHost,layerVframe,collectView,share,keepHTML,naked,viewChildren,dispatcherRecast
+optionals:updaterVDOM,updaterQuick,updaterAsync,updaterTouchAttr,serviceCombine,servicePush,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,vframeHost,layerVframe,collectView,share,viewInitAsync,keepHTML,naked,viewChildren,dispatcherRecast
 */
 define('magix', ['$'], function (require) {
     if (typeof DEBUG == 'undefined')
@@ -1821,24 +1821,17 @@ define('magix', ['$'], function (require) {
                         me['$v'] = view;
                         me['$a'] = Dispatcher_UpdateTag;
                         View_DelegateEvents(view);
-                        params = G_ToTry(view.init, [params, {
+                        G_ToTry(view.init, [params, {
                                 node: node,
                                 deep: !view.tmpl
                             }], view);
-                        if (!params)
-                            params = Vframe_Promise;
-                        sign = ++me['$g'];
-                        params.then(function () {
-                            if (sign == me['$g']) {
-                                view['$b']();
-                                if (!view.tmpl) { //无模板
-                                    me['$h'] = 0; //不会修改节点，因此销毁时不还原
-                                    if (!view['$e']) {
-                                        view.endUpdate();
-                                    }
-                                }
+                        view['$b']();
+                        if (!view.tmpl) { //无模板
+                            me['$h'] = 0; //不会修改节点，因此销毁时不还原
+                            if (!view['$e']) {
+                                view.endUpdate();
                             }
-                        });
+                        }
                     }
                 });
             }
@@ -2876,8 +2869,7 @@ define('magix', ['$'], function (require) {
                 view.endUpdate(selfId);
             }
             if (ref.c) {
-                G_DOC.trigger({
-                    type: 'htmlchanged',
+                G_DOC.fire('htmlchanged', {
                     vId: selfId
                 });
             }
