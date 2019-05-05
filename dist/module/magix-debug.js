@@ -1272,10 +1272,12 @@ let State = {
                 }
             }
             State_DataIsChanged = 0;
-            this.fire(G_CHANGED, {
-                keys: State_ChangedKeys
-            });
+            //防止在change事件中再次digest造成的死循环
+            let keys = G_Assign({}, State_ChangedKeys);
             State_ChangedKeys = {};
+            this.fire(G_CHANGED, {
+                keys
+            });
         }
     },
     /**
