@@ -30,7 +30,9 @@ define('magix', /*#if(!modules.naked){#*/['$'],/*#}#*/ require => {
                         for (let m of g) {
                             a.push(m && m.__esModule && m.default || m);
                         }
-                        if (fn) fn(...a);
+                        if (fn) {
+                            CallFunction(fn, a);
+                        }
                     });
                 } else {
                     if (!G_IsArray(name)) name = [name];

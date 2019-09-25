@@ -157,6 +157,36 @@ let G_ParseExpr = (expr, data, result) => {
     }
     return result;
 };
+let CallIndex = 0;
+let CallList = [];
+let CallBreakTime = 48;
+let StartCall = () => {
+    let last = G_Now(),
+        next;
+    while (1) {
+        next = CallList[CallIndex - 1];
+        if (next) {
+            next.apply(CallList[CallIndex], CallList[CallIndex + 1]);
+            CallIndex += 3;
+            if (G_Now() - last > CallBreakTime &&
+                CallList.length > CallIndex) {
+                setTimeout(StartCall);
+                console.log(`[CF] take a break of ${CallList.length} at ${CallIndex}`);
+                break;
+            }
+        } else {
+            CallList.length = CallIndex = 0;
+            break;
+        }
+    }
+};
+let CallFunction = (fn, args, context) => {
+    CallList.push(fn, context, args);
+    if (!CallIndex) {
+        CallIndex = 1;
+        setTimeout(StartCall);
+    }
+};
 /*#}#*/
 /**
  * Magix对象，提供常用方法
@@ -167,6 +197,7 @@ let Magix = {
     /**
      * @lends Magix
      */
+    task: CallFunction,
     /**
      * 设置或获取配置信息
      * @param  {Object} cfg 初始化配置参数对象
