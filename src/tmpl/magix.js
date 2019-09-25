@@ -117,7 +117,9 @@ let G_ToUri = (path, params, keo) => {
     let arr = [], v, p, f;
     for (p in params) {
         v = params[p] + G_EMPTY;
-        if (!keo || v || G_Has(keo, p)) {
+        if (!keo ||
+            (v && v != keo[p]) ||
+            (!v && G_Has(keo, p))) {
             v = encodeURIComponent(v);
             arr.push(f = p + '=' + v);
         }
