@@ -1,13 +1,13 @@
 //#snippet;
 //#uncheck = jsThis,jsLoop;
 //#exclude = loader,allProcessor;
-/*!3.8.14 Licensed MIT*/
+/*!3.8.16 Licensed MIT*/
 /*
 author:kooboy_li@163.com
 loader:amd
-enables:style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,eventEnterLeave,kissy
+enables:style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,viewInitAsync
 
-optionals:updaterVDOM,updaterQuick,updaterAsync,updaterTouchAttr,serviceCombine,servicePush,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,vframeHost,layerVframe,collectView,share,viewInitAsync,keepHTML,naked,viewChildren,dispatcherRecast
+optionals:updaterVDOM,updaterQuick,updaterAsync,updaterTouchAttr,serviceCombine,servicePush,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,vframeHost,layerVframe,collectView,share,keepHTML,naked,viewChildren,dispatcherRecast
 */
 define('magix', ['$'], function ($) {
     if (typeof DEBUG == 'undefined')
@@ -507,7 +507,7 @@ define('magix', ['$'], function ($) {
         var arr = [], v, p, f;
         for (p in params) {
             v = params[p] + G_EMPTY;
-            if (!keo || v || G_Has(keo, p)) {
+            if (v || G_Has(keo, p)) {
                 v = encodeURIComponent(v);
                 arr.push(f = p + '=' + v);
             }
@@ -547,6 +547,65 @@ define('magix', ['$'], function ($) {
         }
         return result;
     };
+    var CallIndex = 0;
+    var CallList = [];
+    var CallBreakTime = 48;
+    var StartCall = function () {
+        var last = G_Now(), next;
+        while (1) {
+            next = CallList[CallIndex - 1];
+            if (next) {
+                next.apply(CallList[CallIndex], CallList[CallIndex + 1]);
+                CallIndex += 3;
+                if (G_Now() - last > CallBreakTime &&
+                    CallList.length > CallIndex) {
+                    setTimeout(StartCall);
+                    console.log("[CF] take a break of " + CallList.length + " at " + CallIndex);
+                    break;
+                }
+            }
+            else {
+                CallList.length = CallIndex = 0;
+                break;
+            }
+        }
+    };
+    var CallFunction = function (fn, args, context) {
+        CallList.push(fn, context, args);
+        if (!CallIndex) {
+            CallIndex = 1;
+            setTimeout(StartCall);
+        }
+    };
+    var Mark = function (host, key) {
+        var deletedKey = G_SPLITER + '$a';
+        var markObjectKey = G_SPLITER + '$b';
+        var sign;
+        if (!host[deletedKey]) {
+            var markHost = host[markObjectKey] || (host[markObjectKey] = {});
+            if (!markHost.hasOwnProperty(key)) {
+                markHost[key] = 0;
+            }
+            sign = ++markHost[key];
+        }
+        return function () {
+            var temp = host[markObjectKey];
+            return temp && sign === temp[key];
+        };
+    };
+    var Unmark = function (host) {
+        host[G_SPLITER + '$b'] = 0;
+        host[G_SPLITER + '$a'] = 1;
+    };
+    var EventDefaultOptions = {
+        bubbles: true,
+        cancelable: true
+    };
+    var DispatchEvent = function (element, type, data) {
+        var e = new Event(type, EventDefaultOptions);
+        G_Assign(e, data);
+        element.dispatchEvent(e);
+    };
     /**
      * Magix对象，提供常用方法
      * @name Magix
@@ -556,6 +615,10 @@ define('magix', ['$'], function ($) {
         /**
          * @lends Magix
          */
+        mark: Mark,
+        unmark: Unmark,
+        dispatch: DispatchEvent,
+        task: CallFunction,
         /**
          * 设置或获取配置信息
          * @param  {Object} cfg 初始化配置参数对象
@@ -859,6 +922,7 @@ define('magix', ['$'], function ($) {
         use: G_Require,
         Cache: G_Cache,
         nodeId: IdIt,
+        use: G_Require,
         guard: Safeguard
     };
     /**
@@ -1146,6 +1210,12 @@ define('magix', ['$'], function ($) {
         diff: function () {
             return State_ChangedKeys;
         },
+        setup: function (keys) {
+            SetupKeysRef(keys);
+        },
+        teardown: function (keys) {
+            TeardownKeysRef(keys);
+        },
         /**
          * 清除数据，该方法需要与view绑定，写在view的mixins中，如mixins:[Magix.Sate.clean('user,permission')]
          * @param  {String} keys 数据key
@@ -1356,7 +1426,7 @@ define('magix', ['$'], function ($) {
             srcHash = href.replace(Router_TrimQueryReg, G_EMPTY);
             query = G_ParseUri(srcQuery);
             hash = G_ParseUri(srcHash);
-            params = G_Assign({}, query[G_PARAMS], hash[G_PARAMS]);
+            params = G_Assign(G_Assign({}, query[G_PARAMS]), hash[G_PARAMS]);
             result = {
                 get: GetParam,
                 href: href,
@@ -1476,7 +1546,7 @@ define('magix', ['$'], function ($) {
             }
             else if (lParams) { //只有参数，如:a=b&c=d
                 tPath = lPath; //使用历史路径
-                tParams = G_Assign({}, lParams, tParams); //复制原来的参数，合并新的参数
+                tParams = G_Assign(G_Assign({}, lParams), tParams); //复制原来的参数，合并新的参数
             }
             Router_Update(tPath, tParams, Router_LLoc, replace, silent, lQuery);
         } }, MEvent
@@ -1807,17 +1877,24 @@ define('magix', ['$'], function ($) {
                         me['$v'] = view;
                         me['$a'] = Dispatcher_UpdateTag;
                         View_DelegateEvents(view);
-                        G_ToTry(view.init, [params, {
+                        params = G_ToTry(view.init, [params, {
                                 node: node,
                                 deep: !view.tmpl
                             }], view);
-                        view['$b']();
-                        if (!view.tmpl) { //无模板
-                            me['$h'] = 0; //不会修改节点，因此销毁时不还原
-                            if (!view['$e']) {
-                                view.endUpdate();
+                        if (!params)
+                            params = Vframe_Promise;
+                        sign = ++me['$g'];
+                        params.then(function () {
+                            if (sign == me['$g']) {
+                                view['$b']();
+                                if (!view.tmpl) { //无模板
+                                    me['$h'] = 0; //不会修改节点，因此销毁时不还原
+                                    if (!view['$e']) {
+                                        view.endUpdate();
+                                    }
+                                }
                             }
-                        }
+                        });
                     }
                 });
             }
@@ -1845,6 +1922,7 @@ define('magix', ['$'], function ($) {
                     delete Body_RangeEvents[id];
                     delete Body_RangeVframes[id];
                     v.fire('destroy', 0, 1, 1);
+                    Unmark(v);
                     View_DestroyAllResources(v, 1);
                     View_DelegateEvents(v, 1);
                     v.owner = 0;
@@ -2170,7 +2248,7 @@ define('magix', ['$'], function ($) {
                 };
                 Body_EvtInfoCache.set(info, match);
             }
-            match = G_Assign({}, match, { r: info });
+            match = G_Assign(G_Assign({}, match), { r: info });
         }
         //如果有匹配但没有处理的vframe或者事件在要搜索的选择器事件里
         if ((match && !match.v) || Body_SearchSelectorEvents[eventType]) {
@@ -2855,7 +2933,8 @@ define('magix', ['$'], function ($) {
                 view.endUpdate(selfId);
             }
             if (ref.c) {
-                G_DOC.fire('htmlchanged', {
+                G_DOC.trigger({
+                    type: 'htmlchanged',
                     vId: selfId
                 });
             }
@@ -4004,14 +4083,6 @@ define('magix', ['$'], function ($) {
     function Service() {
         var me = this;
         me.id = G_Id('s');
-        if (DEBUG) {
-            me.id = G_Id('\x1es');
-            setTimeout(function () {
-                if (!me['$a']) {
-                    console.warn('beware! You should use view.capture to connect Service and View');
-                }
-            }, 1000);
-        }
         me['$g'] = [];
     }
     G_Assign(Service[G_PROTOTYPE], {

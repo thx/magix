@@ -21,7 +21,7 @@ let enableModules = 'style,viewInit,service,ceach,router,resource,configIni,node
 //let enableModules='defaultView,autoEndUpdate,linkage,base,style,viewInit,resource,nodeAttachVframe,updater,mxViewAttr,layerVframe,state';
 
 // for shim
-enableModules = 'style,viewInit,service,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,eventEnterLeave,kissy';
+//enableModules = 'style,viewInit,service,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,eventEnterLeave';
 
 function getAllPrivateFunAndVar(tree) {
   const expression = tree.program.body[0].expression;
@@ -76,90 +76,90 @@ gulp.task('combine', () => {
 
       if (t === 'kissy') {
         let tree = parser.parse(str, {
-            sourceType: 'script'
-          });
-    
-          const tmpArr = str.split('return Magix;');
-          // 输出替换私有方法模块
-          const insertFunArr = [ 'Magix[\'$|_attrForTest_|$priFun$|_attrForTest_|$\']={' ];
-          const { prFunArr, prVarArr } = getAllPrivateFunAndVar(tree);
-          
-          prFunArr.forEach((funName, index) => {
-            insertFunArr.push('\'set-' + funName + '\':function(fun){ var ori=' + funName + ';' + funName + '=fun; return ori;},' + 
-              '\'get-' + funName + '\':function(){ return ' + funName + ';}' + 
-              (index === prFunArr.length - 1 ? '' : ',' ));
-          });
-    
-          insertFunArr.push('};\n');
-          tmpArr[0] = tmpArr[0] + insertFunArr.join('');
-          // 输出私有变量
-          const insertVarArr = [ '    Magix[\'$|_attrForTest_|$priVar$|_attrForTest_|$\']={' ];
-    
-          prVarArr.forEach((varName, index) => {
-            insertVarArr.push('\'get-' + varName + '\':function(){ return ' + varName + ';},' + 
-              '\'set-' + varName + '\':function(value){ ' + varName + ' = value;}' + 
-              (index === prVarArr.length - 1 ? '' : ',' ));
-          });
-    
-          insertVarArr.push('};\n');
-          tmpArr[0] = tmpArr[0] + insertVarArr.join('');
-          testStr = tmpArr.join('    return Magix;');
-          
-          fs.writeFileSync('../dist/' + t + '/magix-es3-debug-test.js', testStr);
+          sourceType: 'script'
+        });
+
+        const tmpArr = str.split('return Magix;');
+        // 输出替换私有方法模块
+        const insertFunArr = ['Magix[\'$|_attrForTest_|$priFun$|_attrForTest_|$\']={'];
+        const { prFunArr, prVarArr } = getAllPrivateFunAndVar(tree);
+
+        prFunArr.forEach((funName, index) => {
+          insertFunArr.push('\'set-' + funName + '\':function(fun){ var ori=' + funName + ';' + funName + '=fun; return ori;},' +
+            '\'get-' + funName + '\':function(){ return ' + funName + ';}' +
+            (index === prFunArr.length - 1 ? '' : ','));
+        });
+
+        insertFunArr.push('};\n');
+        tmpArr[0] = tmpArr[0] + insertFunArr.join('');
+        // 输出私有变量
+        const insertVarArr = ['    Magix[\'$|_attrForTest_|$priVar$|_attrForTest_|$\']={'];
+
+        prVarArr.forEach((varName, index) => {
+          insertVarArr.push('\'get-' + varName + '\':function(){ return ' + varName + ';},' +
+            '\'set-' + varName + '\':function(value){ ' + varName + ' = value;}' +
+            (index === prVarArr.length - 1 ? '' : ','));
+        });
+
+        insertVarArr.push('};\n');
+        tmpArr[0] = tmpArr[0] + insertVarArr.join('');
+        testStr = tmpArr.join('    return Magix;');
+
+        fs.writeFileSync('../dist/' + t + '/magix-es3-debug-test.js', testStr);
       }
 
       fs.writeFileSync('../dist/' + t + '/magix-es3-debug.js', str);
-      
+
     }
   });
 });
 
 gulp.task('compress', () => {
-    type.split(',').forEach(t => {
-        gulp.src('../dist/' + t + '/magix-debug.js')
-            .pipe(uglifyES({
-                esModule: t == 'module',
-                compress: {
-                    expression: true,
-                    keep_fargs: false,
-                    drop_console: true,
-                    global_defs: {
-                        DEBUG: false
-                    }
-                },
-                output: {
-                    ascii_only: true
-                }
-            }))
-            .pipe(header('/*!<%=ver%> MIT kooboy_li@163.com*/', {
-                ver: pkg.version
-            }))
-            .pipe(rename('magix.js'))
-            .pipe(gulp.dest('../dist/' + t + '/'));
-        gulp.src('../dist/' + t + '/magix-es3-debug.js')
-            .pipe(uglifyES({
-                compress: {
-                    expression: true,
-                    keep_fargs: false,
-                    drop_console: true,
-                    global_defs: {
-                        DEBUG: false
-                    }
-                },
-                output: {
-                    ascii_only: true
-                }
-            }))
-            .pipe(header('/*!<%=ver%> MIT kooboy_li@163.com*/', {
-                ver: pkg.version
-            }))
-            .pipe(rename('magix-es3.js'))
-            .pipe(gulp.dest('../dist/' + t + '/'));
-    });
+  type.split(',').forEach(t => {
+    gulp.src('../dist/' + t + '/magix-debug.js')
+      .pipe(uglifyES({
+        esModule: t == 'module',
+        compress: {
+          expression: true,
+          keep_fargs: false,
+          drop_console: true,
+          global_defs: {
+            DEBUG: false
+          }
+        },
+        output: {
+          ascii_only: true
+        }
+      }))
+      .pipe(header('/*!<%=ver%> MIT kooboy_li@163.com*/', {
+        ver: pkg.version
+      }))
+      .pipe(rename('magix.js'))
+      .pipe(gulp.dest('../dist/' + t + '/'));
+    gulp.src('../dist/' + t + '/magix-es3-debug.js')
+      .pipe(uglifyES({
+        compress: {
+          expression: true,
+          keep_fargs: false,
+          drop_console: true,
+          global_defs: {
+            DEBUG: false
+          }
+        },
+        output: {
+          ascii_only: true
+        }
+      }))
+      .pipe(header('/*!<%=ver%> MIT kooboy_li@163.com*/', {
+        ver: pkg.version
+      }))
+      .pipe(rename('magix-es3.js'))
+      .pipe(gulp.dest('../dist/' + t + '/'));
+  });
 });
 
-gulp.task('doc', ['combine'], () => {
-    let content = fs.readFileSync('../dist/' + (type.split(',')[0]) + '/magix-debug.js').toString();
-    let main = doc(content);
-    fs.writeFileSync('../../magix-doc3/tmpl/data.js', 'define("data",function(){return ' + JSON.stringify(main) + '})');
-});
+gulp.task('doc', gulp.series('combine', () => {
+  let content = fs.readFileSync('../dist/' + (type.split(',')[0]) + '/magix-debug.js').toString();
+  let main = doc(content);
+  fs.writeFileSync('../../magix-doc3/tmpl/data.js', 'define("data",function(){return ' + JSON.stringify(main) + '})');
+}));

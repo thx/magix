@@ -1,13 +1,13 @@
 //#snippet;
 //#uncheck = jsThis,jsLoop;
 //#exclude = loader,allProcessor;
-/*!3.8.14 Licensed MIT*/
+/*!3.8.16 Licensed MIT*/
 /*
 author:kooboy_li@163.com
 loader:webpack
-enables:style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,eventEnterLeave,kissy
+enables:style,viewInit,service,ceach,router,resource,configIni,nodeAttachVframe,viewMerge,tipRouter,updater,viewProtoMixins,base,defaultView,autoEndUpdate,linkage,updateTitleRouter,urlRewriteRouter,state,updaterDOM,viewInitAsync
 
-optionals:updaterVDOM,updaterQuick,updaterAsync,updaterTouchAttr,serviceCombine,servicePush,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,vframeHost,layerVframe,collectView,share,viewInitAsync,keepHTML,naked,viewChildren,dispatcherRecast
+optionals:updaterVDOM,updaterQuick,updaterAsync,updaterTouchAttr,serviceCombine,servicePush,tipLockUrlRouter,edgeRouter,forceEdgeRouter,cnum,vframeHost,layerVframe,collectView,share,keepHTML,naked,viewChildren,dispatcherRecast
 */
 module.exports = (() => {
     if (typeof DEBUG == 'undefined') window.DEBUG = true;
@@ -550,7 +550,7 @@ let G_ToUri = (path, params, keo) => {
     let arr = [], v, p, f;
     for (p in params) {
         v = params[p] + G_EMPTY;
-        if (!keo || v || G_Has(keo, p)) {
+        if (v || G_Has(keo, p)) {
             v = encodeURIComponent(v);
             arr.push(f = p + '=' + v);
         }
@@ -590,7 +590,66 @@ let G_ParseExpr = (expr, data, result) => {
     }
     return result;
 };
+let CallIndex = 0;
+let CallList = [];
+let CallBreakTime = 48;
+let StartCall = () => {
+    let last = G_Now(),
+        next;
+    while (1) {
+        next = CallList[CallIndex - 1];
+        if (next) {
+            next.apply(CallList[CallIndex], CallList[CallIndex + 1]);
+            CallIndex += 3;
+            if (G_Now() - last > CallBreakTime &&
+                CallList.length > CallIndex) {
+                setTimeout(StartCall);
+                console.log(`[CF] take a break of ${CallList.length} at ${CallIndex}`);
+                break;
+            }
+        } else {
+            CallList.length = CallIndex = 0;
+            break;
+        }
+    }
+};
+let CallFunction = (fn, args, context) => {
+    CallList.push(fn, context, args);
+    if (!CallIndex) {
+        CallIndex = 1;
+        setTimeout(StartCall);
+    }
+};
 
+let Mark = (host, key) => {
+    let deletedKey = G_SPLITER + '$a';
+    let markObjectKey = G_SPLITER + '$b';
+    let sign;
+    if (!host[deletedKey]) {
+        let markHost = host[markObjectKey] || (host[markObjectKey] = {});
+        if (!markHost.hasOwnProperty(key)) {
+            markHost[key] = 0;
+        }
+        sign = ++markHost[key];
+    }
+    return () => {
+        let temp = host[markObjectKey];
+        return temp && sign === temp[key];
+    }
+};
+let Unmark = host => {
+    host[G_SPLITER + '$b'] = 0;
+    host[G_SPLITER + '$a'] = 1;
+};
+let EventDefaultOptions = {
+    bubbles: true,
+    cancelable: true
+};
+let DispatchEvent = (element, type, data) => {
+    let e = new Event(type, EventDefaultOptions);
+    G_Assign(e, data);
+    element.dispatchEvent(e);
+};
 /**
  * Magix对象，提供常用方法
  * @name Magix
@@ -600,6 +659,10 @@ let Magix = {
     /**
      * @lends Magix
      */
+    mark: Mark,
+    unmark: Unmark,
+    dispatch: DispatchEvent,
+    task: CallFunction,
     /**
      * 设置或获取配置信息
      * @param  {Object} cfg 初始化配置参数对象
@@ -920,6 +983,7 @@ let Magix = {
     Cache: G_Cache,
     
     nodeId: IdIt,
+    use: G_Require,
     guard: Safeguard
 };
     
@@ -1215,6 +1279,12 @@ let State = {
      */
     diff() {
         return State_ChangedKeys;
+    },
+    setup(keys) {
+        SetupKeysRef(keys);
+    },
+    teardown(keys) {
+        TeardownKeysRef(keys);
     },
     /**
      * 清除数据，该方法需要与view绑定，写在view的mixins中，如mixins:[Magix.Sate.clean('user,permission')]
@@ -1964,13 +2034,19 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
                     
                     View_DelegateEvents(view);
                     
-                     G_ToTry(view.init, [params, {
+                    
+                    params = G_ToTry(view.init, [params, {
                         node,
                         
                         deep: !view.tmpl
                     }], view);
                     
                     
+                    if (!params) params = Vframe_Promise;
+                    sign = ++me['$g'];
+                    params.then(() => {
+                        if (sign == me['$g']) {
+                            
                             view['$b']();
                             if (!view.tmpl) { //无模板
                                 me['$h'] = 0; //不会修改节点，因此销毁时不还原
@@ -1979,6 +2055,9 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
                                 }
                             }
                             
+                        }
+                    });
+                    
                 }
             });
         }
@@ -2013,6 +2092,7 @@ G_Assign(Vframe[G_PROTOTYPE], MEvent, {
                 
                 v.fire('destroy', 0, 1, 1);
                 
+                Unmark(v);
                 
                 View_DestroyAllResources(v, 1);
                 
@@ -3091,7 +3171,8 @@ let Updater_Digest = (updater, digesting) => {
         
         if (ref.c) {
             
-            G_DOC.fire('htmlchanged', {
+            G_DOC.trigger({
+                type: 'htmlchanged',
                 vId: selfId
             });
             
@@ -4289,14 +4370,6 @@ let Service_Send = (me, attrs, done, flag, save) => {
 function Service() {
     let me = this;
     me.id = G_Id('s');
-    if (DEBUG) {
-        me.id = G_Id('\x1es');
-        setTimeout(() => {
-            if (!me['$a']) {
-                console.warn('beware! You should use view.capture to connect Service and View');
-            }
-        }, 1000);
-    }
     me['$g'] = [];
 }
 

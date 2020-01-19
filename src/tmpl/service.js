@@ -298,14 +298,6 @@ let Service_Send = (me, attrs, done, flag, save) => {
 function Service() {
     let me = this;
     me.id = G_Id('s');
-    if (DEBUG) {
-        me.id = G_Id('\x1es');
-        setTimeout(() => {
-            if (!me['@{service#captured}']) {
-                console.warn('beware! You should use view.capture to connect Service and View');
-            }
-        }, 1000);
-    }
     me['@{service#list}'] = [];
 }
 

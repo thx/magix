@@ -352,6 +352,7 @@ G_Assign(Vframe[G_PROTOTYPE]/*#if(!modules.mini){#*/, MEvent/*#}#*/, {
                 /*#if(!modules.mini){#*/
                 v.fire('destroy', 0, 1, 1);
                 /*#}#*/
+                Unmark(v);
                 /*#if(modules.resource){#*/
                 View_DestroyAllResources(v, 1);
                 /*#}#*/

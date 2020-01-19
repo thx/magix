@@ -133,6 +133,7 @@ module.exports = (options, es3) => {
         header += '\r\nenables:' + Object.keys(m.enables);
         header += '\r\n\r\noptionals:' + m.others;
         header += '\r\n*/\r\n';
+        //console.log(JSON.stringify(m.enables),loaderType);
         if (es3) {
             m.enables.es3 = true;
         }
@@ -140,6 +141,7 @@ module.exports = (options, es3) => {
         if (loaderType == 'module') {
             m.enables.naked = true;
         }
+        //console.log(m.enables);
         return rs.process(tmpl(header + content, m.enables));
     });
 };

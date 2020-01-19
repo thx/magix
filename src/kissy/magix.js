@@ -8,7 +8,7 @@ KISSY.add('magix', (S, SE, DOM, SNode) => {
     let G_Require = (name, fn) => {
         S.use(name && (name + G_EMPTY), (S, ...args) => {
             if (fn) {
-                fn.apply(S, args);
+                CallFunction(fn, args, S);
             }
         });
     };
@@ -92,5 +92,5 @@ KISSY.add('magix', (S, SE, DOM, SNode) => {
     /*#}#*/
     return Magix;
 }, {
-        requires: ['event', 'dom', 'node']
-    });
+    requires: ['event', 'dom', 'node']
+});

@@ -103,7 +103,7 @@ declare namespace Magix3 {
          * @param key key
          * @param defaultValue 当值不存在时候返回的默认值
          */
-        get<TDefaultValueType=any>(key: string, defaultValue?: TDefaultValueType): string
+        get<TDefaultValueType = any>(key: string, defaultValue?: TDefaultValueType): string
 
     }
     /**
@@ -154,7 +154,7 @@ declare namespace Magix3 {
          * 获取设置的数据，当key未传递时，返回整个数据对象
          * @param key 设置时的数据key
          */
-        get<TReturnType=any>(key?: string): TReturnType
+        get<TReturnType = any>(key?: string): TReturnType
         /**
          * 设置数据
          * @param data 数据对象，如{a:20,b:30}
@@ -210,7 +210,7 @@ declare namespace Magix3 {
          * @param key 数据key，如果未传递则返回整个数据对象
          * @param defaultValue 默认值，如果传递了该参数且从bag中获取到的数据类型如果与defaultValue不一致，则使用defaultValue
          */
-        get<TReturnAndDefaultValueType=any>(key?: string, defaultValue?: TReturnAndDefaultValueType): TReturnAndDefaultValueType
+        get<TReturnAndDefaultValueType = any>(key?: string, defaultValue?: TReturnAndDefaultValueType): TReturnAndDefaultValueType
 
         /**
          * 设置数据
@@ -239,7 +239,7 @@ declare namespace Magix3 {
     /**
      * 事件对象接口
      */
-    interface Event<T=any> {
+    interface Event<T = any> {
         /**
          * 绑定事件
          * @param name 事件名称
@@ -271,7 +271,7 @@ declare namespace Magix3 {
          * 从状态对象中获取数据
          * @param key 数据key，如果未传递则返回整个状态对象
          */
-        get<TReturnType=any>(key?: string): TReturnType
+        get<TReturnType = any>(key?: string): TReturnType
         /**
          * 设置数据
          * @param data 数据对象
@@ -289,6 +289,20 @@ declare namespace Magix3 {
          * @param unchanged 指示哪些数据并没有变化的对象
          */
         digest(data?: object, unchanged?: { [key: string]: any }): void
+        /**
+         * 返回有哪些变化的数据key
+         */
+        diff(): object
+        /**
+         * 建立数据与key的引用关系
+         * @param keys 逗号分割的字符串
+         */
+        setup(keys: string): void
+        /**
+         * 解除数据与key的引用关系
+         * @param keys 逗号分割的字符串
+         */
+        teardown(keys: string): void
         /**
          * State中的数据发生变化时触发
          */
@@ -487,18 +501,18 @@ declare namespace Magix3 {
          * @param key 缓存资源时使用的key，唯一的key对应唯一的资源
          * @param resource 缓存的资源
          */
-        set<TResourceAndReturnType=any>(key: string, resource: TResourceAndReturnType): TResourceAndReturnType
+        set<TResourceAndReturnType = any>(key: string, resource: TResourceAndReturnType): TResourceAndReturnType
 
         /**
          * 获取缓存的资源，如果不存在则返回undefined
          * @param key 缓存资源时使用的key
          */
-        get<TReturnType=any>(key: string): TReturnType
+        get<TReturnType = any>(key: string): TReturnType
         /**
          * 从缓存对象中删除缓存的资源
          * @param key 缓存的资源key
          */
-        del<TReturnType=any>(key: string): TReturnType
+        del<TReturnType = any>(key: string): TReturnType
         /**
          * 判断缓存对象中是否包含给定key的缓存资源
          * @param key 缓存的资源key
@@ -509,7 +523,7 @@ declare namespace Magix3 {
          * @param callback 回调
          * @param options 回调时传递的额外对象
          */
-        each<TResourceType=any, TOptionsType=any>(callback: (resource: TResourceType, options: TOptionsType, cache: this) => void, options?: TOptionsType): void
+        each<TResourceType = any, TOptionsType = any>(callback: (resource: TResourceType, options: TOptionsType, cache: this) => void, options?: TOptionsType): void
     }
     /**
      * 缓存类
@@ -545,7 +559,7 @@ declare namespace Magix3 {
          * @param props 原型方法或属性的对象
          * @param statics 静态方法或属性的对象
          */
-        extend<TProps=object, TStatics =object>(props?: TExtendPropertyDescriptor<TProps & BasePrototype>, statics?: TStatics): this & TStatics
+        extend<TProps = object, TStatics = object>(props?: TExtendPropertyDescriptor<TProps & BasePrototype>, statics?: TStatics): this & TStatics
         /**
          * 原型
          */
@@ -798,7 +812,7 @@ declare namespace Magix3 {
          * @param props 包含可选的init和render方法的对象
          * @param statics 静态方法或属性的对象
          */
-        extend<TProps=object, TStatics =object>(props?: TExtendPropertyDescriptor<TProps & ViewPrototype>, statics?: TStatics): this & TStatics
+        extend<TProps = object, TStatics = object>(props?: TExtendPropertyDescriptor<TProps & ViewPrototype>, statics?: TStatics): this & TStatics
         /**
          * 扩展到Magix.View原型上的对象
          * @param props 包含可选的ctor方法的对象
@@ -1047,7 +1061,13 @@ declare namespace Magix3 {
          * @param o 保护对象
          */
         guard<T extends object>(o: T): T
-
+        /**
+         * 排除执行函数，解决卡顿问题
+         * @param fn 待执行的函数
+         * @param args 向函数传递的参数
+         * @param context 执行上下文对象
+         */
+        task(fn: (...args) => any, args?: any[], context?: object): void
         /**
          * 向页面追加样式
          * @param key 样式对应的唯一key，该key主要防止向页面反复添加同样的样式
@@ -1064,6 +1084,24 @@ declare namespace Magix3 {
          * @param prefix guid的前缀，默认mx-
          */
         guid(prefix?: string): string
+        /**
+         * 在某个对象上打标，处理异步问题
+         * @param host 打标对象
+         * @param signature 标志字符串
+         */
+        mark(host: Object, signature: String): () => boolean
+        /**
+         * 取消打标
+         * @param host 打标对象
+         */
+        unmark(host: Object): void
+        /**
+         * 派发dom事件
+         * @param element dom节点对象
+         * @param type 事件名称
+         * @param data 事件参数
+         */
+        dispatch(element: HTMLElement | Node, type: string, data?: object): void
         /**
          * 接管管理类
          */

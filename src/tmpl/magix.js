@@ -117,9 +117,7 @@ let G_ToUri = (path, params, keo) => {
     let arr = [], v, p, f;
     for (p in params) {
         v = params[p] + G_EMPTY;
-        if (!keo ||
-            (v && v != keo[p]) ||
-            (!v && G_Has(keo, p))) {
+        if (v || G_Has(keo, p)) {
             v = encodeURIComponent(v);
             arr.push(f = p + '=' + v);
         }
@@ -190,6 +188,35 @@ let CallFunction = (fn, args, context) => {
     }
 };
 /*#}#*/
+let Mark = (host, key) => {
+    let deletedKey = G_SPLITER + '@{marker#object.deleted}';
+    let markObjectKey = G_SPLITER + '@{marker#object}';
+    let sign;
+    if (!host[deletedKey]) {
+        let markHost = host[markObjectKey] || (host[markObjectKey] = {});
+        if (!markHost.hasOwnProperty(key)) {
+            markHost[key] = 0;
+        }
+        sign = ++markHost[key];
+    }
+    return () => {
+        let temp = host[markObjectKey];
+        return temp && sign === temp[key];
+    }
+};
+let Unmark = host => {
+    host[G_SPLITER + '@{marker#object}'] = 0;
+    host[G_SPLITER + '@{marker#object.deleted}'] = 1;
+};
+let EventDefaultOptions = {
+    bubbles: true,
+    cancelable: true
+};
+let DispatchEvent = (element, type, data) => {
+    let e = new Event(type, EventDefaultOptions);
+    G_Assign(e, data);
+    element.dispatchEvent(e);
+};
 /**
  * Magix对象，提供常用方法
  * @name Magix
@@ -199,6 +226,9 @@ let Magix = {
     /**
      * @lends Magix
      */
+    mark: Mark,
+    unmark: Unmark,
+    dispatch: DispatchEvent,
     task: CallFunction,
     /**
      * 设置或获取配置信息
@@ -533,5 +563,6 @@ let Magix = {
     type: G_Type,
     /*#}#*/
     nodeId: IdIt,
+    use: G_Require,
     guard: Safeguard
 };

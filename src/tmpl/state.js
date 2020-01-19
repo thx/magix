@@ -192,6 +192,12 @@ let State = {
     diff() {
         return State_ChangedKeys;
     },
+    setup(keys) {
+        SetupKeysRef(keys);
+    },
+    teardown(keys) {
+        TeardownKeysRef(keys);
+    },
     /**
      * 清除数据，该方法需要与view绑定，写在view的mixins中，如mixins:[Magix.Sate.clean('user,permission')]
      * @param  {String} keys 数据key
