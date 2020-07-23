@@ -310,7 +310,8 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys) => {
     if (I_SpecialDiff(oldNode, newNode) ||
         (oldNode.nodeType == 1 && oldNode.hasAttribute(G_Tag_View_Key)) ||
         !(oldNode.isEqualNode && oldNode.isEqualNode(newNode))) {
-        if (oldNode.nodeName === newNode.nodeName) {
+        if (oldNode.nodeName === newNode.nodeName &&
+            oldNode.type === newNode.type) {
             // Handle regular element node updates.
             if (oldNode.nodeType === 1) {
                 let staticKey = G_GetAttribute(newNode, G_Tag_Key);

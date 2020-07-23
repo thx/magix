@@ -1,6 +1,6 @@
 {
   "name": "magix",
-  "version": "3.8.16",
+  "version": "3.8.17",
   "description": "view manager framewrok",
   "main": "dist/webpack/magix-debug.js",
   "types": "types/magix.d.ts",

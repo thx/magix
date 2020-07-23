@@ -81,24 +81,24 @@ let Body_FindVframeInfo = (current, eventType) => {
             selectorVfId = tempId;//如果节点有缓存，则使用缓存
         }
         if (!view) { //先找最近的vframe
-            vfs.push(begin);
+            //vfs.push(begin);
             while (begin != G_DOCBODY && (begin = begin.parentNode)) { //找最近的vframe,且节点上没有mx-autonomy属性
-                if (Vframe_Vframes[tempId = begin.id] ||
+                if (Vframe_Vframes[tempId = begin.id] /*||
                     ((selectorObject = Body_RangeVframes[tempId = begin['@{node#owner.vframe}']]) &&
-                        selectorObject[begin['@{node#guid}']] == 1)) {
+                        selectorObject[begin['@{node#guid}']] == 1)*/) {
                     selectorVfId = tempId;
                     break;
                 }
-                vfs.push(begin);
+                //vfs.push(begin);
             }
-            for (info of vfs) {
-                if (!(tempId = Body_RangeVframes[selectorVfId])) {
-                    tempId = Body_RangeVframes[selectorVfId] = {};
-                }
-                selectorObject = info['@{node#guid}'] || (info['@{node#guid}'] = ++Body_Guid);
-                tempId[selectorObject] = 1;
-                info['@{node#owner.vframe}'] = selectorVfId;
-            }
+            // for (info of vfs) {
+            //     if (!(tempId = Body_RangeVframes[selectorVfId])) {
+            //         tempId = Body_RangeVframes[selectorVfId] = {};
+            //     }
+            //     selectorObject = info['@{node#guid}'] || (info['@{node#guid}'] = ++Body_Guid);
+            //     tempId[selectorObject] = 1;
+            //     info['@{node#owner.vframe}'] = selectorVfId;
+            // }
         }
         //if (selectorVfId != G_HashKey) { //从最近的vframe向上查找带有选择器事件的view
         /*#if(modules.layerVframe){#*/

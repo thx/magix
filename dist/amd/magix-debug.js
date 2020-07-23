@@ -1,7 +1,7 @@
 //#snippet;
 //#uncheck = jsThis,jsLoop;
 //#exclude = loader,allProcessor;
-/*!3.8.16 Licensed MIT*/
+/*!3.8.17 Licensed MIT*/
 /*
 author:kooboy_li@163.com
 loader:amd
@@ -2434,24 +2434,24 @@ let Body_FindVframeInfo = (current, eventType) => {
             selectorVfId = tempId;//如果节点有缓存，则使用缓存
         }
         if (!view) { //先找最近的vframe
-            vfs.push(begin);
+            //vfs.push(begin);
             while (begin != G_DOCBODY && (begin = begin.parentNode)) { //找最近的vframe,且节点上没有mx-autonomy属性
-                if (Vframe_Vframes[tempId = begin.id] ||
+                if (Vframe_Vframes[tempId = begin.id] /*||
                     ((selectorObject = Body_RangeVframes[tempId = begin['$d']]) &&
-                        selectorObject[begin['$e']] == 1)) {
+                        selectorObject[begin['$e']] == 1)*/) {
                     selectorVfId = tempId;
                     break;
                 }
-                vfs.push(begin);
+                //vfs.push(begin);
             }
-            for (info of vfs) {
-                if (!(tempId = Body_RangeVframes[selectorVfId])) {
-                    tempId = Body_RangeVframes[selectorVfId] = {};
-                }
-                selectorObject = info['$e'] || (info['$e'] = ++Body_Guid);
-                tempId[selectorObject] = 1;
-                info['$d'] = selectorVfId;
-            }
+            // for (info of vfs) {
+            //     if (!(tempId = Body_RangeVframes[selectorVfId])) {
+            //         tempId = Body_RangeVframes[selectorVfId] = {};
+            //     }
+            //     selectorObject = info['$e'] || (info['$e'] = ++Body_Guid);
+            //     tempId[selectorObject] = 1;
+            //     info['$d'] = selectorVfId;
+            // }
         }
         //if (selectorVfId != G_HashKey) { //从最近的vframe向上查找带有选择器事件的view
         
@@ -2918,7 +2918,8 @@ let I_SetNode = (oldNode, newNode, oldParent, ref, vf, keys) => {
     if (I_SpecialDiff(oldNode, newNode) ||
         (oldNode.nodeType == 1 && oldNode.hasAttribute(G_Tag_View_Key)) ||
         !(oldNode.isEqualNode && oldNode.isEqualNode(newNode))) {
-        if (oldNode.nodeName === newNode.nodeName) {
+        if (oldNode.nodeName === newNode.nodeName &&
+            oldNode.type === newNode.type) {
             // Handle regular element node updates.
             if (oldNode.nodeType === 1) {
                 let staticKey = G_GetAttribute(newNode, G_Tag_Key);
