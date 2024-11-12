@@ -28,7 +28,7 @@
         '$<click>'(e){
             console.log('view root click',e);
         }
-    
+
     range:{
         app:{
             20:{
@@ -253,25 +253,25 @@ let Body_DOMEventProcessor = domEvent => {
         }
         target = target.parentNode || G_DOCBODY;
     }
-    if ((fn = arr.length)) {
-        ignore = G_HashKey;
-        for (; fn--;) {
-            view = arr[fn];
-            if (view.nodeType) {
-                if (!(eventInfos = Body_RangeEvents[ignore])) {
-                    eventInfos = Body_RangeEvents[ignore] = {};
-                }
-                lastVfId = view['@{node#guid}'] || (view['@{node#guid}'] = ++Body_Guid);
-                if (!(params = eventInfos[lastVfId])) {
-                    params = eventInfos[lastVfId] = {};
-                    //view['@{node#owner.vframe}'] = ignore;
-                }
-                params[type] = 1;
-            } else {
-                ignore = view;
-            }
-        }
-    }
+    // if ((fn = arr.length)) {
+    //     ignore = G_HashKey;
+    //     for (; fn--;) {
+    //         view = arr[fn];
+    //         if (view.nodeType) {
+    //             if (!(eventInfos = Body_RangeEvents[ignore])) {
+    //                 eventInfos = Body_RangeEvents[ignore] = {};
+    //             }
+    //             lastVfId = view['@{node#guid}'] || (view['@{node#guid}'] = ++Body_Guid);
+    //             if (!(params = eventInfos[lastVfId])) {
+    //                 params = eventInfos[lastVfId] = {};
+    //                 //view['@{node#owner.vframe}'] = ignore;
+    //             }
+    //             params[type] = 1;
+    //         } else {
+    //             ignore = view;
+    //         }
+    //     }
+    // }
 };
 let Body_DOMEventBind = (type, searchSelector, remove) => {
     let counter = Body_RootEvents[type] | 0;
