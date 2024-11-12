@@ -27,6 +27,5 @@ Magix配套的[离线编译工具](https://github.com/thx/magix-combine)帮你�
 
 [magix-os](https://github.com/thx/magix-os) web桌面系统 KISSY版本
 
-[magix-doc3](https://github.com/thx/magix-doc3) magix文档，seajs独立版本，不使用动态加载
 
 [点击这里查看更多](https://github.com/thx/magix/issues/15)
